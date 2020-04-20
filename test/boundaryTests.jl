@@ -60,7 +60,6 @@
 
         # test the gradient is just an indicator with the right offset
         i = 6; j=7
-        grad = gradient(x -> vcat(x, randn(5,5,5,2))[i,1,1,1], randn(5,5,5,2))[1]
         grad = gradient(x -> pad(x, (5,6))[i,j,1,1], randn(5,5,5,2))[1]
         @test size(grad)==(5,5,5,2)
         @test grad[1,1,1,1] ==1

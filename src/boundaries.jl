@@ -29,25 +29,25 @@ for (TYPE, CONVERT) in (
         # 1D padding
         function pad(x::$TYPE{T, N}, padBy::Union{<:Integer, NTuple{1, <:Integer}}) where {T, N}
             szx = size(x)
-            padded = vcat($CONVERT(zeros(T, padBy[1], szx[2:end]...)),
+            padded = cat($CONVERT(zeros(T, padBy[1], szx[2:end]...)),
                              x,
-                             $CONVERT(zeros(T, padBy[1], szx[2:end]...)))
+                             $CONVERT(zeros(T, padBy[1], szx[2:end]...)), dims=(1,))
             return padded
         end
 
         # 2D padding
         function pad(x::$TYPE{T, N}, padBy::NTuple{2,<:Integer}) where {T, N}
             szx = size(x)
-            firstRow = hcat($CONVERT(zeros(T, padBy...,  szx[3:end]...)),
-                            $CONVERT(zeros(T, padBy[1], szx[2:end]...)),
-                             $CONVERT(zeros(T, padBy...,  szx[3:end]...)))
-            secondRow = hcat($CONVERT(zeros(T, szx[1] , padBy[2], szx[3:end]...)),
-                             x,
-                             $CONVERT(zeros(T, szx[1] , padBy[2], szx[3:end]...)))
-            thirdRow = hcat($CONVERT(zeros(T, padBy...,  szx[3:end]...)),
-                            $CONVERT(zeros(T, padBy[1], szx[2:end]...)),
-                            $CONVERT(zeros(T, padBy...,  szx[3:end]...)))
-            return vcat(firstRow, secondRow, thirdRow)
+            firstRow = cat($CONVERT(zeros(T, padBy...,  szx[3:end]...)),
+                           $CONVERT(zeros(T, padBy[1], szx[2:end]...)),
+                           $CONVERT(zeros(T, padBy...,  szx[3:end]...)), dims=2)
+            secondRow = cat($CONVERT(zeros(T, szx[1] , padBy[2], szx[3:end]...)),
+                            x,
+                            $CONVERT(zeros(T, szx[1] , padBy[2], szx[3:end]...)),dims=(2,))
+            thirdRow = cat($CONVERT(zeros(T, padBy...,  szx[3:end]...)),
+                           $CONVERT(zeros(T, padBy[1], szx[2:end]...)),
+                           $CONVERT(zeros(T, padBy...,  szx[3:end]...)), dims=(2,)) 
+            return cat(firstRow, secondRow, thirdRow, dims=(1,))
         end
     end
 end
