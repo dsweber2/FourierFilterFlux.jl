@@ -1,6 +1,9 @@
 using FourierFilterFlux
-using Test
+using Test, Flux
 
 @testset "FourierFilterFlux.jl" begin
-    # Write your own tests here.
+    include("boundaryTests.jl")
+    include("ConvFFTConstructors.jl")
+    include("ConvFFTtransform.jl")
+    include("shearletConv.jl")
 end
