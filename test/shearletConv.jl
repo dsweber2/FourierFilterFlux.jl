@@ -37,16 +37,9 @@ shearLevel = 1; scale =2; inputSize = (25,25,1,2); useGpu = true; σm =abs; dTyp
         res = Shearlab.sheardec2D(init, cpuShears)
 
         @test σm.(res) ≈ cpu(fullResult)
-
-        
         # just the averaging filter
-        shears = averagingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
-                             useGpu, dType = dType, σ=σm)
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.padBy...,
-                                                fill(0, length(inputSize)-2)...)
-        @test shears.σ == σm
-        @test shears.bias == nothing
-        @test ndims(shears.weight)==3
+        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
+                             useGpu, dType = dType, σ=σm, averagingLayer=true)
         @test size(shears.weight, 3) ==1
         singleRes = shears(init)
         ax = axes(fullResult)
@@ -84,13 +77,19 @@ end
                                                  typeBecomes=Float32,
                                                  padded=true)
         res = Shearlab.sheardec2D(init, cpuShears)
-        @test res ≈ σm.(cpu(fullResult))
-
-
+        #println("$inputSize, $scale, $shearLevel, $useGpu, $σm")
+        #typeof(res)
+        @test σm.(res) ≈ cpu(fullResult)
+        # if !(typeof(tesRes)<:Test.Pass)
+        #     println("PROBLEM:    $inputSize, $scale, $shearLevel, $useGpu, $σm")
+        # else
+        #     println("fine: $inputSize, $scale, $shearLevel, $useGpu, $σm")
+        # end
         # just the averaging filter
-        shears = averagingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
-                             useGpu, dType = dType, σ=σm)
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.padBy...,
+        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
+                               useGpu = useGpu, dType = dType, σ=σm,
+                               averagingLayer=true)       
+        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
                                                 fill(0, length(inputSize)-2)...)
         @test shears.σ == σm
         @test shears.bias == nothing
