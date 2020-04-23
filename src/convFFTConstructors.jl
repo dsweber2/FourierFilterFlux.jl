@@ -39,7 +39,7 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     end
     return ConvFFT(shearlets, bias, inputSize, σ, plan=plan, 
                    boundary = boundary, dType = dType,
-                   trainable=trainable)
+                   trainable=trainable, OT=dType)
 end
 
 function defaultShearletScale(inputSize, scale)

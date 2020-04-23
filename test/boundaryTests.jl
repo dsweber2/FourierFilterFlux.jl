@@ -65,3 +65,30 @@
         @test grad[1,1,1,1] ==1
     end
 end
+
+@testset "boundaries" begin
+    x = randn(10,10,10)
+    bc = Pad((10,10))
+    xbc, usedInds = FourierFilterFlux.applyBC(x,bc,2)
+    @test size(xbc) == (10+2*10, 10+2*10, 10)
+    @test usedInds == (11:20, 11:20)
+
+    bc = Pad(10)
+    xbc, usedInds = FourierFilterFlux.applyBC(x,bc,1)
+    @test size(xbc) == (10+2*10, 10, 10)
+    @test usedInds == (11:20,)
+
+    bc = Periodic()
+    xbc, usedInds = FourierFilterFlux.applyBC(x,bc,1)
+    @test size(xbc) == (10, 10, 10)
+    @test usedInds==(1:10,)
+
+    bc = FourierFilterFlux.Symmetric()
+    xbc, usedInds = FourierFilterFlux.applyBC(x,bc,2)
+    @test size(xbc) == (20, 20, 10)
+    @test usedInds==(1:10, 1:10)
+
+    eSz, nBound = FourierFilterFlux.effectiveSize((10,10), Pad((-1,-1)))
+    @test eSz== (16,16)
+    @test nBound==Pad(3,3)
+end

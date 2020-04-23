@@ -6,18 +6,74 @@ struct Periodic <: ConvBoundary end
 struct Pad{N} <: ConvBoundary 
     padBy::NTuple{N,Int}
 end
+Pad(x::Vararg{<:Integer, N}) where N = Pad{N}(x)
+import Base.ndims
+ndims(p::Pad{N}) where N = N
+
+function Base.show(io::IO, p::Pad{N}) where N
+    print(io, "Pad$(p.padBy)")
+end
+
 # as in the DCT2 TODO: implement this in a way that is as space efficient as a DCT2, instead of doubling things
 struct Symmetric <: ConvBoundary end
 
 # size methods. given the size from the fft, return the size of the input
+function originalSize(sz, boundary::Pad{N}) where N
+    return sz .- 2 .* boundary.padBy#([sz[ii]-2*p for p in boundary.padBy]..., )
+end
+
+function originalSize(sz, boundary::Periodic) where N
+    return sz#([sz[1] for p in boundary.padBy]..., )
+end
+
+# TODO: when Symmetric gets implemented using a CFT, this should shrink
+function originalSize(sz, boundary::Symmetric) where N
+    return sz./2 #([Int(sz[ii]/2) for p in boundary.padBy]..., )
+end
+
+# size methods. given the input size, figure out the resulting size
 function effectiveSize(sz, boundary::Pad{N}) where N
-    return ([sz[1]-2*p for p in l.boundary.padBy]..., )
+    if boundary.padBy[1]>0
+        return sz .+ 2 .* boundary.padBy, boundary
+    elseif boundary.padBy[1]==0
+        return sz, Periodic
+    elseif boundary.padBy[1] < 0
+        newBoundary = Pad(([sz[i]>>2+1 for i=1:N]..., ))
+        return effectiveSize(sz, newBoundary)[1], newBoundary
+    end
 end
 
 function effectiveSize(sz, boundary::Periodic) where N
-    return ([sz[1]-2*p for p in l.boundary.padBy]..., )
+    return sz, boundary
 end
 
+# TODO: when Symmetric gets implemented using a CFT, this should shrink
+function effectiveSize(sz, boundary::Symmetric) where N
+    return 2 .* sz, boundary
+end
+
+# apply the boundary condition appropriately to the input matrix. nd is the
+# number of dimensions that we're working with
+function applyBC(x, bc::Pad, nd)
+    usedInds = ([bc.padBy[ii] .+ (1:size(x, ii)) for
+                 ii=1:ndims(bc)]..., )
+    return (pad(x,bc.padBy), usedInds)
+end
+
+function applyBC(x, bc::Periodic, nd)
+    return (x, axes(x)[1:nd])
+end
+
+function applyBC(x, bc::Symmetric, nd)
+    println(nd)
+    flipThisDim = cat(x, reverse(x, dims=nd), dims=nd)
+    println(size(flipThisDim))
+    if nd==1
+        return flipThisDim, axes(x)[1:nd]
+    else
+        return applyBC(flipThisDim, bc, nd-1)[1], axes(x)[1:nd]
+    end
+end
 
 
 # padding methods

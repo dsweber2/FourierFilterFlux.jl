@@ -1,4 +1,4 @@
-shearLevel = 1; scale =2; inputSize = (25,25,1,2); useGpu = true; σm =abs; dType=Float32
+scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = false; σm =relu; dType=Float32
 # standard input size
 @testset "shearing constructors tiny" begin
     inputSizes = [(25,25,1,2), (25, 25, 4, 5, 3)]
@@ -8,15 +8,17 @@ shearLevel = 1; scale =2; inputSize = (25,25,1,2); useGpu = true; σm =abs; dTyp
     dType = Float32
     σs =[identity, abs, relu]
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
+
         shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                               useGpu = useGpu, dType = dType, σ=σm) 
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.padBy...,
+                               useGpu = useGpu, dType = dType, σ=σm)
+
+        @test size(shears.fftPlan) == inputSize .+ (2 .* shears.bc.padBy...,
                                                    fill(0, length(inputSize)-2)...)
         @test shears.σ == σm
         @test shears.bias == nothing
         @test ndims(shears.weight)==3
         if useGpu
-            init = cu(randn(dType, inputSize));
+            init = gpu(randn(dType, inputSize));
         else
             init = randn(dType, inputSize);
         end
@@ -47,6 +49,7 @@ shearLevel = 1; scale =2; inputSize = (25,25,1,2); useGpu = true; σm =abs; dTyp
     end
 end
 
+inputSize = (400,400,1,2); scale=1; shearLevel=1; useGpu=true; σm=abs
 @testset "shearing constructors large" begin
     # realistic size example
     inputSizes = [(400,400,1,2)]
@@ -55,10 +58,10 @@ end
     σs = [identity, abs, relu]
     dType = Float32
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
-        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
-                            useGpu, dType = dType, σ=σm) 
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.padBy...,
-                                                fill(0, length(inputSize)-2)...)
+        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
+                               useGpu = useGpu, dType = dType, σ=σm) 
+        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
+                                                   fill(0, length(inputSize)-2)...)
         @test shears.σ == σm
         @test shears.bias == nothing
         @test ndims(shears.weight)==3
