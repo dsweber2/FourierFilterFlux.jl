@@ -28,3 +28,26 @@ end
         apply.(cpu(cv.weight[:,:,vis]))[restrict...]
     end
 end
+
+
+positive_glorot_uniform(dims...) = 
+    (rand(Float32,dims...) .* sqrt(2.0f0 / sum(Flux.nfan(dims...))))
+# distributed about uniform for all
+function uniform_perturbed_gaussian(dims...)
+    netSize = prod(dims)
+    A = 1 ./netSize  .+ randn(dims)./netSize/10;
+    A = Float32.(A./norm(A))
+end
+function iden_perturbed_gaussian(dims...) # only works for the 2d case
+    m = minimum(dims)
+    netSize = prod(dims) 
+    if m== dims[2]
+        return [I; zeros(Float32, dims[1]-m, dims[2])] .+ randn(Float32, dims)./100
+    else
+        return [I zeros(Float32, dims[1], dims[2]-m)] .+ randn(Float32, dims)./100
+    end
+end
+# doubly stochastic matrix (Probably more work than it's worth)
+
+
+
