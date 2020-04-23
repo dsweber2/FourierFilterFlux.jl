@@ -1,7 +1,8 @@
 module FourierFilterFlux
 
 using CuArrays
-using Zygote, Flux, Shearlab, LinearAlgebra, FFTW
+using Zygote, Flux, Shearlab, LinearAlgebra
+using AbstractFFTs
 using Wavelets
 using Flux
 using Adapt
