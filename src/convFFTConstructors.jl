@@ -70,18 +70,18 @@ end
 create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't trainable
 """
 function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true, 
-                      dType = Float32, σ = abs, trainable = false,
+                      dType = Float32, σ = identity, trainable = false,
                       plan = true, init = Flux.glorot_normal, bias=false,
-                      padded=true, padBy= ceil(Int,inputSize[1]/10), cw =
-                      WT.Morlet(), varargs...) where {N,T} 
+                      boundary=Sym(), cw = WT.Morlet(), varargs...) where {N,T} 
     waveletType = wavelet(cw; varargs...)
-    if !padded
-        padBy = nothing
-        effSize = inputSize[1] >> 1 + 1
+    wavelets,ω = computeWavelets(inputSize[1], waveletType; T=T)
+    if typeof(cw) <: WT.Dog
+        OT= dType
+        An=nothing
     else
-        effSize = (2*padBy + inputSize[1]) >> 1
+        An=(1,)
+        OT= Complex{dType}
     end
-    wavelets,ω = computeWavelets(effSize, waveletType; T=T)
     if bias
         bias = init(inputSize[2:end-1]..., size(wavelets,2))
     else
@@ -94,17 +94,5 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
 
 
     return ConvFFT(wavelets, bias, inputSize, σ, plan=plan, dType = dType,
-                   trainable=trainable, padBy = padBy)
-end
-
-function defaultShearletScale(inputSize, scale)
-    if minimum(inputSize[1:2])>=24 && scale >0
-        return scale
-    elseif minimum(inputSize[1:2])>=24
-        return 4
-    elseif minimum(inputSize[1:2])>=12
-        return 2
-    else
-        error("can't meaningfully make shearlets at size $(inputSize[1:2])")
-    end
+                   trainable=trainable, boundary = boundary, OT=OT, An=An)
 end

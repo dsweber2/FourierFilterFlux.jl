@@ -11,7 +11,7 @@ using Base: tail
 
 import Adapt: adapt
 export pad, poolSize, originalDomain, params!, adapt
-export Periodic, Pad, ConvBoundary, Symmetric
+export Periodic, Pad, ConvBoundary, Sym, analytic
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
 # inits
@@ -42,19 +42,21 @@ D gives the dimension, T gives an indication whether it is trainable or not,
 and OT gives the output entry type (e.g. if the transform is
 real to real, this is <: real, whereas if its analytic this is <:complex)
 """
-struct ConvFFT{D, F, A, V, PD, P, T, OT}
+struct ConvFFT{D, OT, F, A, V, PD, P, T, An}
     σ::F
     weight::A
     bias::V
     bc::PD
     fftPlan::P
+    analytic::An
 end
 
 function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
                  identity; plan=true, boundary = Periodic(),
-                 dType=Float32, trainable=true, OT=Float32) where {T,N}
+                 dType=Float32, trainable=true, OT=Float32, 
+                 An=nothing) where {T,N}
     @assert length(originalSize) >= N-1
-    if length(originalSize) == N
+    if length(originalSize) == N-1
         exSz = (originalSize..., 1) # default number of channels is 1
     else
         exSz = originalSize
@@ -64,25 +66,30 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
 
     convDims = (1:(N-1)...,)
 
-    if  plan && dType <: Real
+    if  plan && dType <: Real && OT <:Real
         fftPlan = plan_rfft(real.(nullEx), convDims)
+    elseif plan && dType <: Real # output is complex, wavelets analytic
+        println("$netSize, $exSz[$(N):end]")
+        null2 = Adapt.adapt(typeof(w), zeros(netSize..., exSz[N:end]...)) .+
+            0im
+        fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
     elseif plan
         fftPlan = plan_fft!(nullEx, convDims)
     else
         fftPlan = nothing
     end
 
-    return ConvFFT{N-1, typeof(σ), typeof(w), typeof(b), 
-                   typeof(boundary),
-                   typeof(fftPlan), OT, trainable}(σ, w, b, 
-                                                   boundary, fftPlan)
+    return ConvFFT{N-1, OT, typeof(σ), typeof(w), typeof(b), 
+                   typeof(boundary), typeof(fftPlan), 
+                   trainable, typeof(An)}(σ, w, b, boundary, fftPlan, An)
 end
+
 
 function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
                  σ=identity; nConvDims=2, init = Flux.glorot_normal,
                  useGpu=false, plan=true,
                  dType=Float32, OT=Float32, boundary=Periodic(), 
-                 trainable=true) where N
+                 trainable=true, An=nothing) where N
 
     effSize, boundary = effectiveSize(k[1:nConvDims], boundary)
     if dType <: Real
@@ -98,23 +105,36 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
             trainable=trainable, OT=OT)
 end
 
-function Base.show(io::IO, l::ConvFFT)
+function Base.show(io::IO, l::ConvFFT{D, <:Real}) where {D}
     sz = l.fftPlan.sz
-    es, _ = originalSize(l.fftPlan.sz[1:ndims(l.weight)-1], l.bc)
+    println("ndims(l.weight)-1 = $(ndims(l.weight)-1)")
+    es = originalSize(l.fftPlan.sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
           "nfilters = $(size(l.weight)[end]), " *
           "σ=$(l.σ), " * 
           "bc=$(l.bc)]")
 end
 
+function Base.show(io::IO, l::ConvFFT{D, <:Complex}) where {D}
+    sz = l.fftPlan[1].sz
+    es = originalSize(l.fftPlan[1].sz[1:ndims(l.weight)-1], l.bc)
+    print(io, "ConvFFT[input=($(es), " *
+          "nfilters = $(size(l.weight)[end]), " *
+          "σ=$(l.σ), " * 
+          "bc=$(l.bc)]")
+end
+
+analytic(p::ConvFFT) = p.analytic!=nothing
+
+
 import Flux.params!
-function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, OT, false}, seen =
-                 IdSet()) where {A,B,C,D,E,F, OT}
+function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, false}, seen =
+                 IdSet()) where {A,B,C,D,E,F, G}
     return
 end
 
-function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, OT, true}, seen =
-    IdSet()) where {A,B,C,D,E,F, OT}
+function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, true}, seen =
+    IdSet()) where {A,B,C,D,E,F, G}
     params!(p, x.weight, seen)
     params!(p, x.bias, seen)
 end

@@ -83,8 +83,8 @@ end
     @test size(xbc) == (10, 10, 10)
     @test usedInds==(1:10,)
 
-    bc = FourierFilterFlux.Symmetric()
-    xbc, usedInds = FourierFilterFlux.applyBC(x,bc,2)
+    bc = FourierFilterFlux.Sym()
+    xbc, usedInds = FourierFilterFlux.applyBC(x, bc, 2)
     @test size(xbc) == (20, 20, 10)
     @test usedInds==(1:10, 1:10)
 

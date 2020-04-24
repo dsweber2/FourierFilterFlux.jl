@@ -15,7 +15,7 @@ function Base.show(io::IO, p::Pad{N}) where N
 end
 
 # as in the DCT2 TODO: implement this in a way that is as space efficient as a DCT2, instead of doubling things
-struct Symmetric <: ConvBoundary end
+struct Sym <: ConvBoundary end
 
 # size methods. given the size from the fft, return the size of the input
 function originalSize(sz, boundary::Pad{N}) where N
@@ -26,9 +26,9 @@ function originalSize(sz, boundary::Periodic) where N
     return sz#([sz[1] for p in boundary.padBy]..., )
 end
 
-# TODO: when Symmetric gets implemented using a CFT, this should shrink
-function originalSize(sz, boundary::Symmetric) where N
-    return sz./2 #([Int(sz[ii]/2) for p in boundary.padBy]..., )
+# TODO: when Sym gets implemented using a CFT, this should shrink
+function originalSize(sz, boundary::Sym) where N
+    return Int.(sz./2) #([Int(sz[ii]/2) for p in boundary.padBy]..., )
 end
 
 # size methods. given the input size, figure out the resulting size
@@ -47,8 +47,8 @@ function effectiveSize(sz, boundary::Periodic) where N
     return sz, boundary
 end
 
-# TODO: when Symmetric gets implemented using a CFT, this should shrink
-function effectiveSize(sz, boundary::Symmetric) where N
+# TODO: when Sym gets implemented using a CFT, this should shrink
+function effectiveSize(sz, boundary::Sym) where N
     return 2 .* sz, boundary
 end
 
@@ -64,10 +64,8 @@ function applyBC(x, bc::Periodic, nd)
     return (x, axes(x)[1:nd])
 end
 
-function applyBC(x, bc::Symmetric, nd)
-    println(nd)
+function applyBC(x, bc::Sym, nd)
     flipThisDim = cat(x, reverse(x, dims=nd), dims=nd)
-    println(size(flipThisDim))
     if nd==1
         return flipThisDim, axes(x)[1:nd]
     else

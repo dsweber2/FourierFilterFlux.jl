@@ -1,6 +1,39 @@
-shearLevel = 1; scale =2; inputSize = (200,1,2); useGpu = false; σm =abs; dType=Float32
+cw = WT.Morlet(); β = 4.0; averagingLength = 2; normalization = Inf; scale = 8
+inputSize = (305,2)
+function f(inputSize, cw, β, normalization, scale)
+    x = randn(Float32,inputSize)
+    W = waveletLayer(size(x),cw=cw,decreasing=β, averagingLength=averagingLength,
+                     normalization=normalization, s = scale)
+    waves = wavelet(cw; s=scale, averagingLength=averagingLength,
+                    normalization=normalization, decreasing=β)
+    if (typeof(cw) <: Union{WT.Morlet, WT.Paul})
+        @test analytic(W)
+    end
+    xCu = cu(x)
+    wFFF = W(xCu);
+    wWave = cwt(x, waves);
+    @test sizeof(wFFF)===sizeof(wWave)
+    tesRes = @test norm((cpu(wFFF)-wWave))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
+    if !(typeof(tesRes) <: Test.Pass)
+        @info "values are" inputSize cw β averagingLength normalization scale 
+    end
+end
+@testset "Wavelets.jl construction and application" begin
+    CWs = [WT.Morlet(), WT.Morlet(4π), WT.dog1, WT.paul16]
+    inputSizes = ((305,2),(256,1,4))
+    scales = [1,8,12]
+    averagingLengths =(0, 2, 4)
+    normalizations=[1.0, Inf]
+    βs = [1.0,3.5]
+    
+    for inputSize in inputSizes, cw in CWs, β in βs, normalization in
+        normalizations, scale in scales 
+        f(inputSize, cw, β, normalization, scale)
+    end
+end
+
 # standard input size
-@testset "shearing constructors tiny" begin
+@testset "Wavelets.jl constructors tiny" begin
     inputSizes = [(200,1,2), (225, 4, 5, 3)]
     scalesShears = [(1,1),(2,1), (2,2),(4,1), (4,2), (4,3), (4,4)]#, (8,1), (8,2), (8,3), (8,4), (8,6), (8,8)]
     shearLevels = [1,2,4,5]
