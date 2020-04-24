@@ -69,7 +69,6 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
     if  plan && dType <: Real && OT <:Real
         fftPlan = plan_rfft(real.(nullEx), convDims)
     elseif plan && dType <: Real # output is complex, wavelets analytic
-        println("$netSize, $exSz[$(N):end]")
         null2 = Adapt.adapt(typeof(w), zeros(netSize..., exSz[N:end]...)) .+
             0im
         fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
@@ -107,7 +106,6 @@ end
 
 function Base.show(io::IO, l::ConvFFT{D, <:Real}) where {D}
     sz = l.fftPlan.sz
-    println("ndims(l.weight)-1 = $(ndims(l.weight)-1)")
     es = originalSize(l.fftPlan.sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
           "nfilters = $(size(l.weight)[end]), " *

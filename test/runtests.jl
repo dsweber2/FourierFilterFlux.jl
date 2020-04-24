@@ -1,6 +1,7 @@
 #using Revise
 using FourierFilterFlux
-using Test, Flux, LinearAlgebra, FFTW, CuArrays, Shearlab, Wavelets
+using Flux, FFTW, CuArrays, Shearlab, Wavelets
+using Logging, Test, LinearAlgebra
 
 @testset "FourierFilterFlux.jl" begin
     include("boundaryTests.jl")

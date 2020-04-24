@@ -29,7 +29,6 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number, N}, usedInds,
                          fftPlan, bias, An) where N
     axShear = axes(shears)
     axx = axes(x̂)[N:end-1]
-    @info "" typeof(An) An
     λ(ii)= applyWeight(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
                        fftPlan, (N, ii), bias, 
                        typeof(An)<:Tuple ? ((ii in An) ? 1 : true) : nothing)
@@ -41,7 +40,6 @@ end
 # no bias, not analytic and real valued output
 function applyWeight(x̂, shear, usedInds, fftPlan, indices, bias::Nothing, An::Nothing)
     (N,ii)=indices
-    @info "not analytic" size(shear) size(x̂)
     tmp = fftPlan \ (shear .* x̂) # filter
     tmp = tmp[usedInds..., axes(tmp)[length(usedInds)+1:end]...] # get rid of the padding
     tmp = reshape(tmp, (1, size(tmp)...)) # add a dummy dimension to join over
@@ -53,7 +51,6 @@ function applyWeight(x̂, shear, usedInds, fftPlan, indices, bias::Nothing, An::
     (N,ii)=indices
     outer = axes(x̂)[ndims(shear)+1:end]
     isSourceOdd = mod(size(fftPlan,1)+1,2)
-    @info "analytic" size(shear) size(x̂)
     tmp = shear .* x̂ # filter
     wave = cat(tmp, adapt(tmp, zeros(size(shear,1)-1-isSourceOdd, size(tmp)[2:end]...)), dims=1) # symmetrize
     tmp = fftPlan \ wave       # back to time domain
@@ -67,10 +64,8 @@ function applyWeight(x̂, shear, usedInds, fftPlan, indices, bias::Nothing, An::
     (N,ii)=indices
     outer = axes(x̂)[ndims(shear)+1:end]
     isSourceOdd = mod(size(fftPlan,1)+1,2)
-    @info "not analytic, complex" size(shear) size(x̂) outer axes(x̂) ndims(shear)
     tmp = shear .* x̂ # filter
     wave = cat(tmp, reverse(conj.(tmp[2:end-isSourceOdd, outer...]), dims=1), dims=1) # symmetrize
-    @info "" size(wave), size(fftPlan), size(tmp)
     tmp = fftPlan \ wave        # back to time domain
     tmp = tmp[usedInds..., axes(tmp)[length(usedInds)+1:end]...] # get rid of the padding
     tmp = reshape(tmp, (1, size(tmp)...)) # add a dummy dimension to join over

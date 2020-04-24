@@ -80,14 +80,8 @@ inputSize = (400,400,1,2); scale=1; shearLevel=1; useGpu=true; σm=abs
                                                  typeBecomes=Float32,
                                                  padded=true)
         res = Shearlab.sheardec2D(init, cpuShears)
-        #println("$inputSize, $scale, $shearLevel, $useGpu, $σm")
         #typeof(res)
         @test σm.(res) ≈ cpu(fullResult)
-        # if !(typeof(tesRes)<:Test.Pass)
-        #     println("PROBLEM:    $inputSize, $scale, $shearLevel, $useGpu, $σm")
-        # else
-        #     println("fine: $inputSize, $scale, $shearLevel, $useGpu, $σm")
-        # end
         # just the averaging filter
         shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
                                useGpu = useGpu, dType = dType, σ=σm,
