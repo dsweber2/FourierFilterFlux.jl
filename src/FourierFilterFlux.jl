@@ -1,8 +1,8 @@
 module FourierFilterFlux
-
+# TODO: drop useGpu, since we can just pipe through gpu now
 using CuArrays
 using Zygote, Flux, Shearlab, LinearAlgebra
-using AbstractFFTs
+using AbstractFFTs, FFTW #TODO: check the license on FFTW and such
 using Wavelets
 using Flux
 using Adapt
@@ -10,7 +10,7 @@ using RecipesBase
 using Base: tail
 
 import Adapt: adapt
-export pad, poolSize, originalDomain, params!, adapt
+export pad, poolSize, originalDomain, params!, adapt, cu
 export Periodic, Pad, ConvBoundary, Sym, analytic
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
@@ -124,18 +124,25 @@ end
 
 analytic(p::ConvFFT) = p.analytic!=nothing
 
-
-import Flux.params!
-function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, false}, seen =
-                 IdSet()) where {A,B,C,D,E,F, G}
-    return
+Flux.@functor ConvFFT
+function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, true}) where {A,B,C,D,E,F, G} 
+    (CFT.weight, CFT.bias)
 end
-
-function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, true}, seen =
-    IdSet()) where {A,B,C,D,E,F, G}
-    params!(p, x.weight, seen)
-    params!(p, x.bias, seen)
+function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, false}) where {A,B,C,D,E,F, G}
+    tuple()
 end
+# import Flux.params!
+# function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, false}, seen =
+#                  IdSet()) where {A,B,C,D,E,F, G}
+#     return
+# end
+
+# function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, true}, seen =
+#     IdSet()) where {A,B,C,D,E,F, G}
+#     params!(p, x.weight, seen)
+#     params!(p, x.bias, seen)
+# end
+
 
 include("transforms.jl")
 include("Utils.jl")

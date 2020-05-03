@@ -1,3 +1,22 @@
+import Flux.functor
+function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, PD, P, T, An}
+    return (cft.weight,cft.bias, 
+            cft.fftPlan), y->ConvFFT{D, OT, F, typeof(y[1]), typeof(y[2]),
+                                     PD, typeof(y[3]), T, An}(cft.σ, y[1],y[2],
+                                                              cft.bc, y[3],
+                                                              cft.analytic)
+end
+
+import CuArrays.cu
+function CuArrays.cu(P::FFTW.rFFTWPlan)
+    return plan_rfft(cu(zeros(real(eltype(P)), P.sz)), P.region)
+end
+
+function CuArrays.cu(P::FFTW.cFFTWPlan)
+    @info "" eltype(P) P.sz
+    return plan_fft(cu(zeros(eltype(P), P.sz)), P.region)
+end
+
 """
     weights = originalDomain()
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
