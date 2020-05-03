@@ -3,7 +3,7 @@
         originalSize = (10,10,1,2)
         tmp = zeros(originalSize); tmp
         init = cu(zeros(originalSize)); init[5,5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize, useGpu=true)
+        shears = ConvFFT(originalSize) |> gpu
         res = shears(init);
         @test size(res) == (10,10,5,1,2)
         # TODO: for the other boundary conditions. This is just periodic
@@ -41,7 +41,6 @@
             end
             return equivalent[4:13, :, :, :]
         end
-        #@info "" minimum(res), minimum(minimalTransform(shears, init))
         @test minimalTransform(shears, init) ≈ res
 
         shears = ConvFFT(originalSize, 5, abs, useGpu=true, nConvDims=1,

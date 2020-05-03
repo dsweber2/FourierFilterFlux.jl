@@ -8,4 +8,5 @@ using Logging, Test, LinearAlgebra
     include("ConvFFTConstructors.jl")
     include("ConvFFTtransform.jl")
     include("shearletConv.jl")
+    include("waveletConv.jl")
 end

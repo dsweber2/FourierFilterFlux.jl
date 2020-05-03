@@ -40,9 +40,12 @@ end
     averagingLengths =(0, 2, 4)
     normalizations=[1.0, Inf]
     βs = [1.0,3.5]
+    σs =[identity, abs, relu]
     
     for inputSize in inputSizes, cw in CWs, β in βs, normalization in
-        normalizations, scale in scales 
-        f(inputSize, cw, β, normalization, scale)
+        normalizations, scale in scales
+        @testset "inputSize=$inputSize, cw =$(cw), β=$β" begin
+            f(inputSize, cw, β, normalization, scale)
+        end
     end
 end

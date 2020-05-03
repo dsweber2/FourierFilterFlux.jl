@@ -72,15 +72,23 @@ create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't 
 function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true, 
                       dType = Float32, σ = identity, trainable = false,
                       plan = true, init = Flux.glorot_normal, bias=false,
-                      boundary=Sym(), cw = WT.Morlet(), varargs...) where {N,T} 
+                      boundary=Sym(), cw = WT.Morlet(), averagingLayer = false,
+                      varargs...) where {N,T} 
     waveletType = wavelet(cw; varargs...)
     wavelets,ω = computeWavelets(inputSize[1], waveletType; T=T)
-    if typeof(cw) <: WT.Dog
-        OT= dType
-        An=nothing
+
+    if averagingLayer
+        wavelets = wavelets[:, 1:1]
     else
-        An=(1,)
-        OT= Complex{dType}
+        wavelets = wavelets
+    end
+
+    if typeof(cw) <: WT.Dog
+        OT = dType
+        An = nothing
+    else
+        An = (1,)
+        OT = Complex{dType}
     end
     if bias
         bias = init(inputSize[2:end-1]..., size(wavelets,2))

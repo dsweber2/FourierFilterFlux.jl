@@ -56,34 +56,37 @@
         usedInds1 = shears.bc.padBy[1] .+ (1:size(x, 1))
         usedInds2 = shears.bc.padBy[2] .+ (1:size(x, 2))
         usedInds = (usedInds1, usedInds2)
+        shears.analytic
         nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
-                                                       shears.fftPlan, nothing)
+                                                      shears.fftPlan, shears.bias,
+                                                      shears.analytic)
         ∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
-                                                             shears.weight,
-                                                             usedInds,
-                                                             shears.fftPlan, nothing)[1,1,1,1,1],
+                                                            shears.weight,
+                                                            usedInds,
+                                                            shears.fftPlan,
+                                                            shears.bias, shears.analytic)[1,1,1,1,1],
                      x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
 
         ax = axes(x̂)[3:end-1]
         tmp = FourierFilterFlux.applyWeight(x̂, shears.weight, usedInds,
-                                             shears.fftPlan, (ax, 1), nothing)
+                                            shears.fftPlan, (ax, 1),
+                                            shears.bias, shears.analytic)
         ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[:,:,1], usedInds,
                                                            shears.fftPlan, (ax, 1),
-                                                           nothing)[1,1,1,1,1], x̂) 
+                                                          shears.bias, shears.analytic)[1,1,1,1,1], x̂) 
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
 
         ∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 1f0/31*2/21)
         sheared = shears(x)
         @test size(sheared) == (21,11,1,1,10)
-        
+
         # convert to a gpu version
         gpuVer = shears |>gpu
-        typeof(gpuVer.weight)
         # TODO: this isn't implemented quite yet
-        #@test typeof(gpuVer.weight) <: CuArray
-        #@test typeof(gpuVer.fftPlan) <: CuArrays.CUFFT.rCuFFTPlan
+        @test typeof(gpuVer.weight) <: CuArray
+        @test typeof(gpuVer.fftPlan) <: CuArrays.CUFFT.rCuFFTPlan
 
         # extra channel dimension
         originalSize = (20,10,16, 1,10)
@@ -158,11 +161,13 @@
         x̂ = shears.fftPlan *ifftshift(x̂,(1,2))
         usedInds = (shears.bc.padBy[1] .+ (1:size(x, 1)),)
         nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
-                                                       shears.fftPlan, nothing)
+                                                       shears.fftPlan,
+                                                      shears.bias, shears.analytic)
         ∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
                                                              shears.weight,
                                                              usedInds,
-                                                             shears.fftPlan, nothing)[1,1,1,1,1],
+                                                             shears.fftPlan,
+                                                            shears.bias, shears.analytic)[1,1,1,1,1],
                      x̂)
         @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
         ∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
@@ -171,15 +176,15 @@
         @test size(sheared) == (21,1,1,10)
 
         # convert to a gpu version
-        gpuVer = shears |>gpu
+        gpuVer = shears |> gpu
         # TODO: this isn't implemented quite yet
-        #@test typeof(gpuVer.weight) <: CuArrays.CuArray
-        #@test typeof(gpuVer.fftPlan) <: CuArrays.CUFFT.rCuFFTPlan
+        @test typeof(gpuVer.weight) <: CuArrays.CuArray
+        @test typeof(gpuVer.fftPlan) <: CuArrays.CUFFT.rCuFFTPlan
 
         # extra channel dimension
         originalSize = (20,16, 1,10)
         shears = ConvFFT(randn(Float32, 16, 3), nothing, originalSize, abs,
-                         plan=true, boundary = Pad(5))
+                         plan=true, boundary = Pad(5), trainable=false)
         @test size(shears.fftPlan)== originalSize .+ (10, 0, 0, 0)
         @test shears.σ == abs
         @test shears.bias == nothing

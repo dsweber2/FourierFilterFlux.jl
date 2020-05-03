@@ -1,4 +1,5 @@
-scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = false; σm =relu; dType=Float32
+#scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = false; σm =relu; dType=Float32
+#cpuShears = 3; singleRes = 3; shears = 3
 # standard input size
 @testset "shearing constructors tiny" begin
     inputSizes = [(25,25,1,2), (25, 25, 4, 5, 3)]
@@ -8,48 +9,65 @@ scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = false; σm =relu; dT
     dType = Float32
     σs =[identity, abs, relu]
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
+        @testset "inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)" begin
+            shears=3
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global shears
+                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
+                                       useGpu = useGpu, dType = dType, σ=σm)
+            end
+            @test size(shears.fftPlan) == 
+                inputSize .+ (2 .* shears.bc.padBy...,
+                              fill(0, length(inputSize)-2)...)
+            @test shears.σ == σm
+            @test shears.bias == nothing
+            @test ndims(shears.weight)==3
+            if useGpu
+                init = gpu(randn(dType, inputSize));
+            else
+                init = randn(dType, inputSize);
+            end
 
-        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                               useGpu = useGpu, dType = dType, σ=σm)
+            fullResult = shears(init);
+            @test size(fullResult) == (inputSize[1:2]...,size(shears.weight,3),
+                                       inputSize[3:end]...)
+            if σm!=relu
+                @test minimum(abs.(fullResult)) > 0
+            end
 
-        @test size(shears.fftPlan) == inputSize .+ (2 .* shears.bc.padBy...,
-                                                   fill(0, length(inputSize)-2)...)
-        @test shears.σ == σm
-        @test shears.bias == nothing
-        @test ndims(shears.weight)==3
-        if useGpu
-            init = gpu(randn(dType, inputSize));
-        else
-            init = randn(dType, inputSize);
+            # compare with the result from Shearlab itself
+            effectiveShears = ceil.(Int, (1:shearLevel)/2)
+            cpuShears=3; res = 2
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global cpuShears, res
+                cpuShears = Shearlab.getshearletsystem2D(inputSize[1:2]...,
+                                                         scale,
+                                                         effectiveShears, 
+                                                         typeBecomes=Float32,
+                                                         padded=true)
+                res = Shearlab.sheardec2D(init, cpuShears)
+            end
+            @test σm.(res) ≈ cpu(fullResult)
+            # just the averaging filter
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global shears
+                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
+                                       useGpu, dType = dType, σ=σm, averagingLayer=true)
+            end
+            @test size(shears.weight, 3) ==1
+            
+            singleRes = 3
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global singleRes
+                singleRes = shears(init)
+            end
+            ax = axes(fullResult)
+            @test fullResult[:,:,end:end, ax[4:end]...] ≈ singleRes
         end
-
-        fullResult = shears(init);
-        @test size(fullResult) == (inputSize[1:2]...,size(shears.weight,3),
-                                   inputSize[3:end]...)
-        if σm!=relu
-            @test minimum(abs.(fullResult)) > 0
-        end
-
-        # compare with the result from Shearlab itself
-        effectiveShears = ceil.(Int, (1:shearLevel)/2)
-        cpuShears = Shearlab.getshearletsystem2D(inputSize[1:2]..., scale,
-                                                 effectiveShears, 
-                                                 typeBecomes=Float32,
-                                                 padded=true)
-        res = Shearlab.sheardec2D(init, cpuShears)
-
-        @test σm.(res) ≈ cpu(fullResult)
-        # just the averaging filter
-        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
-                             useGpu, dType = dType, σ=σm, averagingLayer=true)
-        @test size(shears.weight, 3) ==1
-        singleRes = shears(init)
-        ax = axes(fullResult)
-        @test fullResult[:,:,end:end, ax[4:end]...] ≈ singleRes
     end
 end
 
-inputSize = (400,400,1,2); scale=1; shearLevel=1; useGpu=true; σm=abs
+#inputSize=(400, 400, 1, 2); (scale, shearLevel) =(1, 1);useGpu=true; σm=identity
 @testset "shearing constructors large" begin
     # realistic size example
     inputSizes = [(400,400,1,2)]
@@ -58,39 +76,50 @@ inputSize = (400,400,1,2); scale=1; shearLevel=1; useGpu=true; σm=abs
     σs = [identity, abs, relu]
     dType = Float32
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
-        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                               useGpu = useGpu, dType = dType, σ=σm) 
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
-                                                   fill(0, length(inputSize)-2)...)
-        @test shears.σ == σm
-        @test shears.bias == nothing
-        @test ndims(shears.weight)==3
+        @testset "inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)" begin
+            shears=3
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global shears
+                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
+                useGpu = useGpu, dType = dType, σ=σm)
+            end
+            @test size(shears.fftPlan) == inputSize .+ (2 .* shears.bc.padBy...,
+                                                        fill(0, length(inputSize)-2)...)
+            @test shears.σ == σm
+            @test shears.bias == nothing
+            @test ndims(shears.weight)==3
 
-        if useGpu
-            init = cu(randn(dType, inputSize));
-        else
-            init = randn(dType, inputSize);
+            if useGpu
+                init = cu(randn(dType, inputSize));
+            else
+                init = randn(dType, inputSize);
+            end
+            size(shears.fftPlan)
+            size(init)
+            fullResult = shears(init);
+
+            effectiveShears = ceil.(Int, (1:shearLevel)/2)
+            cpuShears=3
+            with_logger(ConsoleLogger(stderr,Logging.Error)) do
+                #global cpuShears
+                cpuShears = Shearlab.getshearletsystem2D(inputSize[1:2]..., scale,
+                                                         effectiveShears, 
+                                                         typeBecomes=Float32,
+                                                         padded=true)
+            end
+            res = Shearlab.sheardec2D(init, cpuShears)
+            #typeof(res)
+            @test σm.(res) ≈ cpu(fullResult)
+            # just the averaging filter
+            shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
+            useGpu = useGpu, dType = dType, σ=σm,
+            averagingLayer=true)       
+            @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
+            fill(0, length(inputSize)-2)...)
+            @test shears.σ == σm
+            @test shears.bias == nothing
+            @test ndims(shears.weight)==3
+            @test size(shears.weight, 3) ==1
         end
-
-        fullResult = shears(init);
-
-        effectiveShears = ceil.(Int, (1:shearLevel)/2)
-        cpuShears = Shearlab.getshearletsystem2D(inputSize[1:2]..., scale,
-                                                 effectiveShears, 
-                                                 typeBecomes=Float32,
-                                                 padded=true)
-        res = Shearlab.sheardec2D(init, cpuShears)
-        #typeof(res)
-        @test σm.(res) ≈ cpu(fullResult)
-        # just the averaging filter
-        shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                               useGpu = useGpu, dType = dType, σ=σm,
-                               averagingLayer=true)       
-        @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
-                                                fill(0, length(inputSize)-2)...)
-        @test shears.σ == σm
-        @test shears.bias == nothing
-        @test ndims(shears.weight)==3
-        @test size(shears.weight, 3) ==1
     end
 end

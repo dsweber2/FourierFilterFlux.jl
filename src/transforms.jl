@@ -76,5 +76,6 @@ end
 # biased (and one of the others, doesn't matter which)
 function applyWeight(x̂, shear, usedInds, fftPlan, indices, bias, An)
     (N, ii) = indices
-    return applyWeight(x̂, shear, usedInds, fftPlan, indices, nothing) .+ bias[axes(x̂)[N:end-1]..., ii]
+    return applyWeight(x̂, shear, usedInds, fftPlan, indices, nothing, An) .+
+        bias[axes(x̂)[N:end-1]..., ii]
 end
