@@ -80,7 +80,7 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
     if averagingLayer
         wavelets = wavelets[:, 1:1]
     else
-        wavelets = wavelets
+        wavelets = cat(wavelets[:, 2:end], wavelets[:,1], dims=2)
     end
 
     if typeof(cw) <: WT.Dog

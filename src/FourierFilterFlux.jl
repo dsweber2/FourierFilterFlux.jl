@@ -11,7 +11,7 @@ using Base: tail
 
 import Adapt: adapt
 export pad, poolSize, originalDomain, params!, adapt, cu
-export Periodic, Pad, ConvBoundary, Sym, analytic
+export Periodic, Pad, ConvBoundary, Sym, analytic, outType
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
 # inits
@@ -123,6 +123,8 @@ function Base.show(io::IO, l::ConvFFT{D, <:Complex}) where {D}
 end
 
 analytic(p::ConvFFT) = p.analytic!=nothing
+
+outType(p::ConvFFT{D, OT}) where {D, OT} = OT
 
 Flux.@functor ConvFFT
 function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, true}) where {A,B,C,D,E,F, G} 

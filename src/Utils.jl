@@ -6,16 +6,21 @@ function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, 
                                                               cft.bc, y[3],
                                                               cft.analytic)
 end
+import Flux.gpu
 
 import CuArrays.cu
+# TODO this is somewhat kludgy, not sure why cu was converting these back
 function CuArrays.cu(P::FFTW.rFFTWPlan)
     return plan_rfft(cu(zeros(real(eltype(P)), P.sz)), P.region)
 end
+CuArrays.cu(P::CUFFT.rCuFFTPlan) = P
+
 
 function CuArrays.cu(P::FFTW.cFFTWPlan)
-    @info "" eltype(P) P.sz
     return plan_fft(cu(zeros(eltype(P), P.sz)), P.region)
 end
+CuArrays.cu(P::CUFFT.cCuFFTPlan) = P
+
 
 """
     weights = originalDomain()

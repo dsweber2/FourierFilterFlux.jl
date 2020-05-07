@@ -22,6 +22,7 @@
             @test shears.σ == σm
             @test shears.bias == nothing
             @test ndims(shears.weight)==3
+            @test outType(shears)<:Real
             if useGpu
                 init = gpu(randn(dType, inputSize));
             else
