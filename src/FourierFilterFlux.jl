@@ -10,7 +10,7 @@ using RecipesBase
 using Base: tail
 
 import Adapt: adapt
-export pad, poolSize, originalDomain, params!, adapt, cu
+export pad, poolSize, originalDomain, params!, adapt, cu, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
@@ -104,18 +104,27 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
             trainable=trainable, OT=OT)
 end
 
-function Base.show(io::IO, l::ConvFFT{D, <:Real}) where {D}
-    sz = l.fftPlan.sz
-    es = originalSize(l.fftPlan.sz[1:ndims(l.weight)-1], l.bc)
+function Base.show(io::IO, l::ConvFFT{<:Any, <:Real})
+    # stored as a brief description
+    if typeof(l.fftPlan)<:Tuple 
+        sz = l.fftPlan[2]
+    else
+        sz = l.fftPlan.sz
+    end
+    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
           "nfilters = $(size(l.weight)[end]), " *
           "σ=$(l.σ), " * 
           "bc=$(l.bc)]")
 end
 
-function Base.show(io::IO, l::ConvFFT{D, <:Complex}) where {D}
-    sz = l.fftPlan[1].sz
-    es = originalSize(l.fftPlan[1].sz[1:ndims(l.weight)-1], l.bc)
+function Base.show(io::IO, l::ConvFFT{<:Any, <:Complex})
+    if typeof(l.fftPlan[1])<:Tuple 
+        sz = l.fftPlan[1][2]
+    else
+        sz = l.fftPlan.sz
+    end
+    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
           "nfilters = $(size(l.weight)[end]), " *
           "σ=$(l.σ), " * 

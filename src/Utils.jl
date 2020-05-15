@@ -1,3 +1,4 @@
+# ways to convert between gpu and cpu
 import Flux.functor
 function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, PD, P, T, An}
     return (cft.weight,cft.bias, 
@@ -21,7 +22,31 @@ function CuArrays.cu(P::FFTW.cFFTWPlan)
 end
 CuArrays.cu(P::CUFFT.cCuFFTPlan) = P
 
+"""
+jld doesn't like the pointers required by FFTW or CuArray for fft plans, so
+this creates a version which can be saved via jld. The jank format I'm using is
+a tuple listing the typeo of the input (eg CuArray{Float32,3}), the input size,
+and fft region.
 
+"""
+function formatJLD(cft::ConvFFT{D, OT, F, A, V, PD, P, 
+                                T, An}) where {D, OT, F,A,V, PD, P, T, An}
+    newPlan = formatJLD(cft.fftPlan)
+    newWeight = cft.weight |> cpu
+    newBias = cft.bias |> cpu
+    ConvFFT{D,OT,F,typeof(newWeight), typeof(newBias), 
+            PD, typeof(newPlan), T, An}(cft.σ, newWeight, newBias, cft.bc,
+                                        newPlan, cft.analytic)
+end
+
+function formatJLD(pl::Tuple)
+    return ([formatJLD(x) for x in pl]...,)
+end
+function formatJLD(pl::AbstractFFTs.Plan)
+    ArrayType = (typeof(pl) <: CUFFT.CuFFTPlan) ? CuArray : Array
+    return (ArrayType{eltype(pl), ndims(pl)}, size(pl), pl.region)
+end
+formatJLD(p) = p
 """
     weights = originalDomain()
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
@@ -30,6 +55,21 @@ function originalDomain(cv; σ=identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan,1), (1,2)))
 end
 
+function getBatchSize(c::ConvFFT{<:Any,<:Real})
+    if typeof(c.fftPlan) <:Tuple
+        return c.fftPlan[2][end]
+    else
+        return c.fftPlan.sz[end]
+    end
+end
+
+function getBatchSize(c::ConvFFT{<:Any, <:Complex})
+    if typeof(c.fftPlan) <:Tuple
+        return c.fftPlan[1][2][end]
+    else
+        return c.fftPlan[1].sz[end]
+    end
+end
 
 function adapt(Atype, x::T) where T<:CuArrays.CUFFT.CuFFTPlan
     transformSize = x.osz
