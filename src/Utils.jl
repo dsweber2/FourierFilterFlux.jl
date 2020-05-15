@@ -64,7 +64,7 @@ function getBatchSize(c::ConvFFT{<:Any,<:Real})
 end
 
 function getBatchSize(c::ConvFFT{<:Any, <:Complex})
-    if typeof(c.fftPlan) <:Tuple
+    if typeof(c.fftPlan[1]) <:Tuple
         return c.fftPlan[1][2][end]
     else
         return c.fftPlan[1].sz[end]
