@@ -11,7 +11,7 @@ using Base: tail
 
 import Adapt: adapt
 export pad, poolSize, originalDomain, params!, adapt, cu, formatJLD, getBatchSize
-export Periodic, Pad, ConvBoundary, Sym, analytic, outType
+export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
 # inits
@@ -119,10 +119,10 @@ function Base.show(io::IO, l::ConvFFT{<:Any, <:Real})
 end
 
 function Base.show(io::IO, l::ConvFFT{<:Any, <:Complex})
-    if typeof(l.fftPlan[1])<:Tuple 
+    if typeof(l.fftPlan[1])<:Tuple
         sz = l.fftPlan[1][2]
     else
-        sz = l.fftPlan.sz
+        sz = l.fftPlan[1].sz
     end
     es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
@@ -134,26 +134,7 @@ end
 analytic(p::ConvFFT) = p.analytic!=nothing
 
 outType(p::ConvFFT{D, OT}) where {D, OT} = OT
-
-Flux.@functor ConvFFT
-function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, true}) where {A,B,C,D,E,F, G} 
-    (CFT.weight, CFT.bias)
-end
-function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, false}) where {A,B,C,D,E,F, G}
-    tuple()
-end
-# import Flux.params!
-# function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, false}, seen =
-#                  IdSet()) where {A,B,C,D,E,F, G}
-#     return
-# end
-
-# function params!(p::Params, x::ConvFFT{A, B, C, D, E, F, G, true}, seen =
-#     IdSet()) where {A,B,C,D,E,F, G}
-#     params!(p, x.weight, seen)
-#     params!(p, x.bias, seen)
-# end
-
+nFrames(p::ConvFFT) = size(p.weight)[end]
 
 include("transforms.jl")
 include("Utils.jl")

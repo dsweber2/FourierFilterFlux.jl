@@ -22,6 +22,15 @@ function CuArrays.cu(P::FFTW.cFFTWPlan)
 end
 CuArrays.cu(P::CUFFT.cCuFFTPlan) = P
 
+
+function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, true}) where {A,B,C,D,E,F, G} 
+    (CFT.weight, CFT.bias)
+end
+function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, false}) where {A,B,C,D,E,F, G}
+    tuple()
+end
+
+
 """
 jld doesn't like the pointers required by FFTW or CuArray for fft plans, so
 this creates a version which can be saved via jld. The jank format I'm using is
