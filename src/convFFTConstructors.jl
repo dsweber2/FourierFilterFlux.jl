@@ -87,7 +87,7 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
         OT = dType
         An = nothing
     else
-        An = (1,)
+        An = (size(wavelets,2),)
         OT = Complex{dType}
     end
     if bias

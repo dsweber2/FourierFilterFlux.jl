@@ -113,3 +113,20 @@ Zygote.@adjoint function pad(x, padBy::Union{<:Integer,NTuple{1, <:Integer}})
                 nothing)
     end
 end
+
+
+Zygote.@adjoint function applyBC(x, bc::Periodic, nd)
+    return applyBC(x,bc,nd), function(Δ)
+        xbc, usedInds = Δ
+        return xbc, nothing, nothing
+    end
+end
+
+Zygote.@adjoint function applyBC(x, bc::Sym, nd)
+    return applyBC(x,bc,nd), function(Δ)
+        xbc, usedInds = Δ
+        ax = axes(x)
+        aΔ = axes(xbc)
+        return xbc[ax[1:nd]..., aΔ[nd+1:end]...], nothing, nothing
+    end
+end

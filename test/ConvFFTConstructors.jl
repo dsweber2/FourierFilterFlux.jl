@@ -73,7 +73,7 @@
                                             shears.fftPlan, (ax, 1),
                                             shears.bias, shears.analytic)
         ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[:,:,1], usedInds,
-                                                           shears.fftPlan, (ax, 1),
+                                                          shears.fftPlan, (ax, 1),
                                                           shears.bias, shears.analytic)[1,1,1,1,1], x̂) 
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
 
@@ -111,24 +111,22 @@
         wSize = originalSize[1:2] .+ (10, 10)
         wSize = (wSize[1]>>1+1, wSize[2], 3)
         @test size(shears.weight) == wSize
-    end
+end
 
 
-    @testset "1D constructors" begin
-        # normal size
-        originalSize = (21,1,10)
-        x = randn(Float32, originalSize)
+@testset "1D constructors" begin
+    # normal size
+    originalSize = (21,1,10)
+    x = randn(Float32, originalSize)
+    @testset "basic tests across boundary conditions" begin
         weightMatrix = randn(Float32, (21+10)>>1 + 1, 1)
         padding = (5,)
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
-                         plan=true, boundary = Pad(padding))
+                         plan=true, boundary = Pad(padding), trainable=true)
         @test size(shears.fftPlan)== originalSize .+ (10, 0, 0)
         @test shears.σ == abs
         @test shears.bias == nothing
         @test shears.bc.padBy == (5,)
-
-        shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
-                         plan=true, boundary = Pad(padding), trainable=true)
         @test params(shears).order[1] == shears.weight
 
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
@@ -139,37 +137,157 @@
         ∇ = gradient((x)->shears(x)[1,1,1,3], x)
         @test minimum(∇[1][:,:, [1:2..., 4:10...]] .≈ 0)
 
-        # check that the identity ConvFFT is, in fact, an identity
-        weightMatrix = ones(Float32, (21+10)>>1+1, 1)
-        weightMatrix = cat(weightMatrix, weightMatrix, dims=2)
-        padding = 5
-        shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
-                         plan=true, boundary = Pad(padding))
-        x = randn(Float32,21,1,10)
-        @test shears(x)[:,1,:,:] ≈ x
-
-        # check that global multiplication in the Fourier domain is just multiplication
-        weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
-        padding = 5
-        shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
-                         plan=true, boundary = Pad(padding))
+        # Sym test
+        weightMatrix = randn(Float32, (21+1), 1)
+        shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
+                         plan=true, boundary = FourierFilterFlux.Sym())
+        @test size(shears.fftPlan)== originalSize .*(2,1,1)
+        @test shears.σ == abs
+        @test shears.bias == nothing
+        @test typeof(shears.bc)<:Sym
+        @test params(shears).order[1] == shears.weight
         x = randn(21,1,10)
-        @test shears(x)[:,1,:,:] ≈ 2 .* x    
+        ∇ = gradient((x)->shears(x)[1,1,1,3], x)
+        @test minimum(∇[1][:,:, [1:2..., 4:10...]] .≈ 0)
+        @test minimum(abs.(∇[1][:,1,3]))>0
+        weightMatrix = randn(Float32, 21 >>1 + 1, 1)
+        shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
+                         plan=true, boundary = FourierFilterFlux.Periodic())
+        @test size(shears.fftPlan)== originalSize
+        @test shears.σ == abs
+        @test shears.bias == nothing
+        @test typeof(shears.bc)<:Periodic
+        @test params(shears).order[1] == shears.weight
+        x = randn(21,1,10)
+        ∇ = gradient((x)->shears(x)[1,1,1,3], x)
+            @test minimum(∇[1][:,:, [1:2..., 4:10...]] .≈ 0)
+            @test minimum(abs.(∇[1][:,1,3]))>0
+        end
 
-        # internal methods tests
-        x̂ = pad(x, shears.bc.padBy); 
-        x̂ = shears.fftPlan *ifftshift(x̂,(1,2))
-        usedInds = (shears.bc.padBy[1] .+ (1:size(x, 1)),)
-        nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
-                                                       shears.fftPlan,
-                                                      shears.bias, shears.analytic)
-        ∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
-                                                             shears.weight,
-                                                             usedInds,
-                                                             shears.fftPlan,
-                                                            shears.bias, shears.analytic)[1,1,1,1,1],
-                     x̂)
-        @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+        # check that the identity ConvFFT is, in fact, an identity
+        @testset "Identity tests" begin
+            weightMatrix = ones(Float32, (21+10)>>1+1, 1)
+            weightMatrix = cat(weightMatrix, weightMatrix, dims=2)
+            padding = 5
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = Pad(padding))
+            x = randn(Float32,21,1,10)
+            @test shears(x)[:,1,:,:] ≈ x
+
+            weightMatrix = ones(Float32, 21+1, 1)
+            weightMatrix = cat(weightMatrix, weightMatrix, dims=2)
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = FourierFilterFlux.Sym())
+            x = randn(Float32,21,1,10)
+            @test shears(x)[:,1,:,:] ≈ x
+            weightMatrix = ones(Float32, 21>>1+1, 1)
+            weightMatrix = cat(weightMatrix, weightMatrix, dims=2)
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = FourierFilterFlux.Periodic())
+            x = randn(Float32,21,1,10)
+            @test shears(x)[:,1,:,:] ≈ x
+        end
+        # check that global multiplication in the Fourier domain is just multiplication
+        @testset "times 2" begin
+
+            weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
+            padding = 5
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = Pad(padding))
+            x = randn(21,1,10)
+            @test shears(x)[:,1,:,:] ≈ 2 .* x    
+
+
+
+            weightMatrix = 2 .* ones(Float32, 21+1, 1)
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = Sym())
+            x = randn(21,1,10)
+            @test shears(x)[:,1,:,:] ≈ 2 .* x    
+
+
+            weightMatrix = 2 .* ones(Float32, 21>>1+1, 1)
+            shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                             plan=true, boundary = FourierFilterFlux.Periodic())
+            x = randn(Float32,21,1,10)
+            @test shears(x)[:,1,:,:] ≈ 2 .* x
+        end
+    using FourierFilterFlux:applyWeight, applyBC, internalConvFFT
+    weight = 2 .* ones(Complex{Float32}, (21+10)>>1+1, 1)
+    bc = Pad(5)
+    x = randn(Float32,21,1,10)
+    xbc, usedInds = applyBC(x, bc, 1)
+    x̂ = rfft(xbc, (1,))
+    fftPlan = plan_rfft(xbc, (1,))
+    nextLayer = internalConvFFT(x̂, weight, usedInds, fftPlan,
+                                nothing, nothing);
+    ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
+                                        nothing, nothing)[1,1,1,1,1],
+                 x̂)
+    @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+    # no bias, not analytic and real valued output
+    applyWeight(x̂,weight[:,1], usedInds, fftPlan, (:indi, :ces), nothing, nothing)[1,1,1,1]
+∇ = gradient((x̂) -> abs(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
+                                    (:indi, :ces), nothing, nothing)[1,1,1,1]),
+                 x̂)
+@test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+
+# no bias, analytic (so complex valued)
+    fftPlan = plan_fft(xbc, (1,))
+    applyWeight(x̂,weight[:,1], usedInds, fftPlan, (:indi, :ces), nothing, true)[1,1,1,1]
+    ∇ = gradient((x̂) -> abs(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
+                                    (:indi, :ces), nothing, true)[1,1,1,1]),
+                 x̂)
+    @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+
+# no bias, not analytic, complex valued, but still symmetric
+    fftPlan = plan_fft(xbc, (1,))
+    applyWeight(x̂,weight[:,1], usedInds, fftPlan, (:indi, :ces), nothing, 1)[1,1,1,1]
+    ∇ = gradient((x̂) -> real(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
+                                    (:indi, :ces), nothing, true)[1,1,1,1]),
+                 x̂)
+    @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+internalConvFFT(x̂, weight)
+
+    weight = randn(Float32, 21+1, 1)
+    weight = randn(Float32, 21>>1+1, 1)
+
+    weight = randn((21+2*5)>>1+1,1)
+
+
+
+    # internal methods tests
+    weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
+    padding = 5
+    shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                     plan=true, boundary = Pad(padding))
+    x = randn(21,1,10)
+    x̂ = pad(x, shears.bc.padBy); 
+    x̂ = shears.fftPlan *ifftshift(x̂,(1,2))
+    usedInds = (shears.bc.padBy[1] .+ (1:size(x, 1)),)
+    nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
+                                                  shears.fftPlan,
+                                                  shears.bias, shears.analytic);
+    ∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
+                                                        shears.weight,
+                                                        usedInds,
+                                                        shears.fftPlan,
+                                                        shears.bias, shears.analytic)[1,1,1,1,1],
+                 x̂)
+@test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+# 
+
+# no bias, not analytic and real valued output
+weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
+padding = 5
+shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                 plan=true, boundary = Sym())
+applyBC(x)
+applyWeight(x̂, ones(Float32, ), nothing, nothing)
+# no bias, analytic (so complex valued)
+# no bias, not analytic, complex valued, but still symmetric
+# biased (and one of the others, doesn't matter which)
+
         ∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
         @test minimum(abs.(∇[1][:, :, 1,1]).≈ 1f0/31*2)
         sheared = shears(x)
