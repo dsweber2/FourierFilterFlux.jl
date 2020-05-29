@@ -28,6 +28,7 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     else
         shearlets = shears.shearlets
     end
+    shearlets = dType.(shearlets)# correct the element type
     nShears = shears.nShearlets
     if typeof(boundary) <:Pad
         boundary = Pad{2}(shears.padBy)
@@ -83,6 +84,8 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
         wavelets = cat(wavelets[:, 2:end], wavelets[:,1], dims=2)
     end
 
+    wavelets = dType.(wavelets)
+
     if typeof(cw) <: WT.Dog
         OT = dType
         An = nothing
@@ -91,7 +94,7 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
         OT = Complex{dType}
     end
     if bias
-        bias = init(inputSize[2:end-1]..., size(wavelets,2))
+        bias = dType.(init(inputSize[2:end-1]..., size(wavelets,2)))
     else
         bias = nothing
     end

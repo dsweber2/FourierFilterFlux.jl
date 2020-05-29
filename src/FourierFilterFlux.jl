@@ -69,7 +69,7 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
     if  plan && dType <: Real && OT <:Real
         fftPlan = plan_rfft(real.(nullEx), convDims)
     elseif plan && dType <: Real # output is complex, wavelets analytic
-        null2 = Adapt.adapt(typeof(w), zeros(netSize..., exSz[N:end]...)) .+
+        null2 = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...)) .+
             0im
         fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
     elseif plan
