@@ -36,7 +36,7 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     bias = nothing
 
     if useGpu
-        shearlets = cu(shearlets)
+        shearlets = dType.(cu(shearlets))
     end
     return ConvFFT(shearlets, bias, inputSize, σ, plan=plan, 
                    boundary = boundary, dType = dType,
@@ -99,8 +99,10 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
         bias = nothing
     end
     if useGpu
-        wavelets = cu(wavelets)
-        bias = cu(bias)
+        wavelets = dType.(cu(wavelets))
+        if bias!=nothing
+            bias = dType.(cu(bias))
+        end
     end
 
 
