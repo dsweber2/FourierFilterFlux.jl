@@ -10,7 +10,7 @@ using RecipesBase
 using Base: tail
 
 import Adapt: adapt
-export pad, poolSize, originalDomain, params!, adapt, cu, formatJLD, getBatchSize
+export pad, poolSize, originalDomain, params!, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer

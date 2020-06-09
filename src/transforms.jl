@@ -1,3 +1,9 @@
+using Zygote:@show,hook
+function dem(x,msg)
+    #@show (norm(x), typeof(x), msg)
+    return x
+end
+
 # todo version that doesn't have an fft built in
 function (shears::ConvFFT{D, OT, A, B, C, PD, P})(x) where {D, OT, A, B, C, PD, P<:Tuple}
     if typeof(shears.weight)<: CuArray && !(typeof(x) <: CuArray)
@@ -8,10 +14,11 @@ function (shears::ConvFFT{D, OT, A, B, C, PD, P})(x) where {D, OT, A, B, C, PD, 
     Forward = shears.fftPlan[1]
     x̂ = Forward * xbc
 
-    nextLayer = internalConvFFT(x̂,
+    nextLayer = hook(x->dem(x,"should be after internalConvFFT"), internalConvFFT(x̂,
                                 shears.weight, usedInds, shears.fftPlan[2], 
-                                shears.bias, shears.analytic)
-    return shears.σ.(nextLayer)
+                                shears.bias, shears.analytic))
+    tmp = hook(x->dem(x,"nonlin"), shears.σ.(nextLayer))
+    return hook(x->dem(x, "entering ConvFFT"), tmp)
 end
 function (shears::ConvFFT)(x)
     if typeof(shears.weight)<: CuArray && !(typeof(x) <: CuArray)
@@ -37,13 +44,14 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number, N}, usedInds,
     else
         isAnalytic = [nothing for ii=1:size(shears)[end]]
     end
-    λ(ii)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
+    x̂ = hook(x->dem(x,"noop"), x̂)
+    łλ(ii)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
                        fftPlan, (N, ii), bias, 
                        isAnalytic[ii])
-    mapped = map(λ, 1:size(shears)[end])
-    cats = cat(mapped...,dims=1)
-    dogs = permutedims(cats, ((2:N)..., 1, (N+1):ndims(mapped[1])...))
-    return dogs
+    mapped = hook(x->dem(x,"map"), map(łλ, 1:size(shears)[end]))
+    cats = hook(x->dem(x,"cat"), cat(mapped...,dims=1))
+    dogs = hook(x->dem(x,"permute"), permutedims(cats, ((2:N)..., 1, (N+1):ndims(mapped[1])...)))
+    return hook(x->dem(x,"entering internalConvFFT"), dogs)
 end
 
 # no bias, not analytic and real valued output
@@ -95,6 +103,7 @@ Zygote.@adjoint function argWrapper(x̂, shear, usedInds, fftPlan, indices,
     # get what Zygote thinks it should be
     y, _back = Zygote.pullback(applyWeight, x̂, shear, usedInds, fftPlan, bias, An)
     function back(Δ)
+        #println("in argwrapper, $(typeof(Δ))")
         ∂ = _back(Δ)
         return ∂[1], ∂[2], usedInds, ∂[4], indices, bias, An
     end

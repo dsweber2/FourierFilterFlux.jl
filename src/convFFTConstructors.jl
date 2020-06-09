@@ -28,7 +28,11 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     else
         shearlets = shears.shearlets
     end
-    shearlets = dType.(shearlets)# correct the element type
+    if dType<:Real
+        shearlets = Complex{dType}.(shearlets)# correct the element type
+    else
+        shearlets = dType.(shearlets)
+    end
     nShears = shears.nShearlets
     if typeof(boundary) <:Pad
         boundary = Pad{2}(shears.padBy)
@@ -36,6 +40,9 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     bias = nothing
 
     if useGpu
+        println("here")
+        println("$(typeof(shearlets)), $(size(shearlets))")
+        println("$(typeof(cu(shearlets)))")
         shearlets = dType.(cu(shearlets))
     end
     return ConvFFT(shearlets, bias, inputSize, σ, plan=plan, 
