@@ -1,11 +1,11 @@
 cw = WT.Morlet(); β = 4.0; averagingLength = 2; normalization = Inf; scale = 8;
 inputSize = (305,2)
-
 function f(inputSize, cw, β, normalization, scale)
     x = randn(Float32,inputSize)
     W= 3; waves = 4
     # for the purpose of testing, we don't need the wall of warnings
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
+        #global W, waves
         W = waveletLayer(size(x), cw=cw, decreasing=β,
                      averagingLength=averagingLength,
                      normalization=normalization, s = scale)
@@ -17,18 +17,18 @@ function f(inputSize, cw, β, normalization, scale)
     if (typeof(cw) <: Union{WT.Morlet, WT.Paul})
         @test analytic(W)
     end
-    xCu = cu(x)
+    xCu = x
     wFFF = W(xCu);
     wWave = 5;
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
+        # global wWave
         wWave = cwt(x, waves);
     end
     testRes = @test size(wFFF)===size(wWave)
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale 
     end
-
-    testRes = @test norm((cpu(wFFF)-wWave))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
+    testRes = @test norm((cpu(wFFF)-wWave[:,[2:end..., 1], axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale 
     end

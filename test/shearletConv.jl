@@ -1,5 +1,5 @@
-#scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = false; σm =relu; dType=Float32
-#cpuShears = 3; singleRes = 3; shears = 3
+scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = true; σm =relu; dType=Float32
+cpuShears = 3; singleRes = 3; shears = 3
 # standard input size
 @testset "shearing constructors tiny" begin
     inputSizes = [(25,25,1,2), (25, 25, 4, 5, 3)]
@@ -78,6 +78,7 @@ end
     dType = Float32
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
         @testset "inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)" begin
+            println("inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)")
             shears=3
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears

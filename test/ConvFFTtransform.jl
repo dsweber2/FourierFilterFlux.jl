@@ -1,9 +1,9 @@
 @testset "ConvFFT transform" begin
     @testset "ConvFFT 2D" begin
         originalSize = (10,10,1,2)
-        tmp = zeros(originalSize); tmp
+        tmp = zeros(originalSize);
         init = cu(zeros(originalSize)); init[5,5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize) |> gpu
+        shears = ConvFFT(originalSize,useGpu=true)
         res = shears(init);
         @test size(res) == (10,10,5,1,2)
         # TODO: for the other boundary conditions. This is just periodic

@@ -1,7 +1,8 @@
 module FourierFilterFlux
 # TODO: drop useGpu, since we can just pipe through gpu now
-using Reexport 
-@reexport using CUDA
+# using Reexport 
+# @reexport using CUDA
+using CUDA
 using Zygote, Flux, Shearlab, LinearAlgebra
 using AbstractFFTs, FFTW #TODO: check the license on FFTW and such
 using Wavelets

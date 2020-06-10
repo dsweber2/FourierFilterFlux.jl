@@ -42,8 +42,12 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     if useGpu
         println("here")
         println("$(typeof(shearlets)), $(size(shearlets))")
-        println("$(typeof(cu(shearlets)))")
-        shearlets = dType.(cu(shearlets))
+        #println("$(typeof(cu(shearlets)))")
+        if dType<:Real
+            shearlets = Complex{dType}.(shearlets)# correct the element type
+        else
+            shearlets = dType.(shearlets)
+        end
     end
     return ConvFFT(shearlets, bias, inputSize, σ, plan=plan, 
                    boundary = boundary, dType = dType,
@@ -77,7 +81,7 @@ end
 
 create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't trainable
 """
-function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true, 
+function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
                       dType = Float32, σ = identity, trainable = false,
                       plan = true, init = Flux.glorot_normal, bias=false,
                       boundary=Sym(), cw = WT.Morlet(), averagingLayer = false,
@@ -91,7 +95,11 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = true,
         wavelets = cat(wavelets[:, 2:end], wavelets[:,1], dims=2)
     end
 
-    wavelets = dType.(wavelets)
+    if dType<:Real
+        wavelets = Complex{dType}.(wavelets)# correct the element type
+    else
+        wavelets = dType.(wavelets)
+    end
 
     if typeof(cw) <: WT.Dog
         OT = dType

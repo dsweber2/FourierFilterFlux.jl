@@ -7,9 +7,9 @@ function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, 
                                                               cft.bc, y[3],
                                                               cft.analytic)
 end
-import Flux.gpu
+#import Flux.gpu
 
-import CUDA.cu
+#import CUDA.cu
 # TODO this is somewhat kludgy, not sure why cu was converting these back
 function CUDA.cu(P::FFTW.rFFTWPlan)
     return plan_rfft(cu(zeros(real(eltype(P)), P.sz)), P.region)

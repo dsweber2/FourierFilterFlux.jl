@@ -78,6 +78,13 @@
         sheared = shears(x)
         @test size(sheared) == (21,11,1,1,10)
 
+        weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 11+10, 1)
+        padding = (5,5)
+        originalSize = (21,11,1,10)
+        shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                         plan=true, boundary = Pad(padding))
+
+
         # convert to a gpu version
         gpuVer = shears |> gpu
         # TODO: this isn't implemented quite yet

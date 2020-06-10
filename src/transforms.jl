@@ -45,10 +45,11 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number, N}, usedInds,
         isAnalytic = map(x->nothing, (1:size(shears)[end]...,))
     end
     x̂ = hook(x->dem(x,"noop"), x̂)
-    łλ(ii)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
-                       fftPlan, (N, ii), bias, 
-                       isAnalytic[ii])
-    mapped = hook(x->dem(x,"map"), map(łλ, 1:size(shears)[end]))
+    łλ(ii,bias)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
+                       fftPlan, bias[ii], isAnalytic[ii])
+    łλ(ii,bias::Nothing)= argWrapper(x̂, shears[axShear[1:end-1]..., ii],
+                                     usedInds, fftPlan, bias, isAnalytic[ii])
+    mapped = hook(x->dem(x, "map"), map(ii->łλ(ii, bias), 1:size(shears)[end]))
     cats = hook(x->dem(x,"cat"), cat(mapped...,dims=1))
     dogs = hook(x->dem(x,"permute"), permutedims(cats, ((2:N)..., 1, (N+1):ndims(mapped[1])...)))
     return hook(x->dem(x,"entering internalConvFFT"), dogs)
@@ -90,16 +91,16 @@ end
 # biased (and one of the others, doesn't matter which)
 function applyWeight(x̂, shear, usedInds, fftPlan, bias, An)
     return applyWeight(x̂, shear, usedInds, fftPlan, nothing, An) .+
-        bias[axes(x̂)[N:end-1]..., ii]
+        bias
 end
 
 
 """
-this is purely to make sure the pullback has all necessary info
+this is purely because the pullback of applyWeight doesn't pass usedInds or the
+bias backwards, even though it does x̂ and shear correctly
 """
-argWrapper(x̂, shear, usedInds, fftPlan, indices, bias, An) = applyWeight(x̂, shear, usedInds, fftPlan, bias, An)
-Zygote.@adjoint function argWrapper(x̂, shear, usedInds, fftPlan, indices,
-                             bias, An)
+argWrapper(x̂, shear, usedInds, fftPlan, bias, An) = applyWeight(x̂, shear, usedInds, fftPlan, bias, An)
+Zygote.@adjoint function argWrapper(x̂, shear, usedInds, fftPlan, bias, An)
     # get what Zygote thinks it should be
     y, _back = Zygote.pullback(applyWeight, x̂, shear, usedInds, fftPlan, bias, An)
     function back(Δ)
