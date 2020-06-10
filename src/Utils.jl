@@ -9,18 +9,18 @@ function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, 
 end
 import Flux.gpu
 
-import CuArrays.cu
+import CUDA.cu
 # TODO this is somewhat kludgy, not sure why cu was converting these back
-function CuArrays.cu(P::FFTW.rFFTWPlan)
+function CUDA.cu(P::FFTW.rFFTWPlan)
     return plan_rfft(cu(zeros(real(eltype(P)), P.sz)), P.region)
 end
-CuArrays.cu(P::CUFFT.rCuFFTPlan) = P
+CUDA.cu(P::CUFFT.rCuFFTPlan) = P
 
 
-function CuArrays.cu(P::FFTW.cFFTWPlan)
+function CUDA.cu(P::FFTW.cFFTWPlan)
     return plan_fft(cu(zeros(eltype(P), P.sz)), P.region)
 end
-CuArrays.cu(P::CUFFT.cCuFFTPlan) = P
+CUDA.cu(P::CUFFT.cCuFFTPlan) = P
 
 
 function Flux.trainable(CFT::ConvFFT{A, B, C, D, E, F, G, true}) where {A,B,C,D,E,F, G} 
@@ -80,7 +80,7 @@ function getBatchSize(c::ConvFFT{<:Any, <:Complex})
     end
 end
 
-function adapt(Atype, x::T) where T<:CuArrays.CUFFT.CuFFTPlan
+function adapt(Atype, x::T) where T<:CUDA.CUFFT.CuFFTPlan
     transformSize = x.osz
     dataSize = x.sz
     if dataSize != transformSize

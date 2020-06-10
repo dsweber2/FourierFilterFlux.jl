@@ -40,9 +40,9 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number, N}, usedInds,
     axShear = axes(shears)
     axx = axes(x̂)[N:end-1]
     if typeof(An) <: Tuple
-        isAnalytic = [((ii in An) ? 1 : true) for ii=1:size(shears)[end]]
+        isAnalytic = map(ii->((ii in An) ? 1 : true), (1:size(shears)[end]...,))
     else
-        isAnalytic = [nothing for ii=1:size(shears)[end]]
+        isAnalytic = map(x->nothing, (1:size(shears)[end]...,))
     end
     x̂ = hook(x->dem(x,"noop"), x̂)
     łλ(ii)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 

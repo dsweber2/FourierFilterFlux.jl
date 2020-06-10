@@ -1,6 +1,6 @@
 #using Revise
 using FourierFilterFlux
-using Flux, FFTW, CuArrays, Shearlab, Wavelets
+using Flux, FFTW, CUDA, Shearlab, Wavelets
 using Logging, Test, LinearAlgebra
 
 @testset "FourierFilterFlux.jl" begin
