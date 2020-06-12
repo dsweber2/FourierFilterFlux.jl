@@ -106,7 +106,7 @@ Zygote.@adjoint function argWrapper(x̂, shear, usedInds, fftPlan, bias, An)
     function back(Δ)
         #println("in argwrapper, $(typeof(Δ))")
         ∂ = _back(Δ)
-        return ∂[1], ∂[2], usedInds, ∂[4], indices, bias, An
+        return ∂[1], ∂[2], usedInds, ∂[4], bias, An
     end
     return y, back
 end
