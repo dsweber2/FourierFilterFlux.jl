@@ -6,13 +6,13 @@ end
 
 # todo version that doesn't have an fft built in
 function (shears::ConvFFT{D, OT, A, B, C, PD, P})(x) where {D, OT, A, B, C, PD, P<:Tuple}
-    if typeof(shears.weight)<: CuArray && !(typeof(x) <: CuArray)
+    if typeof(shears.weight)<: CuArray && !(typeof(x) <: Flux.CuArray)
         error("don't try to apply a CuArray to a non-CuArray")
     end
     xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight)-1)
 
     Forward = shears.fftPlan[1]
-    x̂ = Forward * xbc
+    x̂ = Forward * CUDA.CuArray(xbc)
 
     nextLayer = hook(x->dem(x,"should be after internalConvFFT"), internalConvFFT(x̂,
                                 shears.weight, usedInds, shears.fftPlan[2], 
