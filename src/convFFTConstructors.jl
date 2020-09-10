@@ -42,7 +42,7 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     if useGpu
         println("here")
         println("$(typeof(shearlets)), $(size(shearlets))")
-        #println("$(typeof(cu(shearlets)))")
+        #println("$(typeof(gpu(shearlets)))")
         if dType<:Real
             shearlets = Complex{dType}.(shearlets)# correct the element type
         else
@@ -101,12 +101,16 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
         wavelets = dType.(wavelets)
     end
 
-    if typeof(cw) <: WT.Dog
+    if typeof(cw) <: WT.Dog && false
         OT = dType
         An = nothing
     else
         An = (size(wavelets,2),)
-        OT = Complex{dType}
+        if dType <: Real
+            OT = Complex{dType}
+        else
+            OT = dType
+        end
     end
     if bias
         bias = dType.(init(inputSize[2:end-1]..., size(wavelets,2)))
@@ -114,9 +118,9 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
         bias = nothing
     end
     if useGpu
-        wavelets = dType.(cu(wavelets))
+        wavelets = dType.(gpu(wavelets))
         if bias!=nothing
-            bias = dType.(cu(bias))
+            bias = dType.(gpu(bias))
         end
     end
 

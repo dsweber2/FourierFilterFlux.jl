@@ -1,3 +1,6 @@
+import NNlib.relu
+relu(x::C) where C<:Complex = real(x) > 0 ? x : C(0)
+
 # ways to convert between gpu and cpu
 import Flux.functor
 function functor(cft::ConvFFT{D, OT, F,A,V, PD, P, T, An}) where {D, OT, F,A,V, PD, P, T, An}
@@ -64,7 +67,7 @@ function originalDomain(cv; σ=identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan,1), (1,2)))
 end
 
-function getBatchSize(c::ConvFFT{<:Any,<:Real})
+function getBatchSize(c::ConvFFT)
     if typeof(c.fftPlan) <:Tuple
         return c.fftPlan[2][end]
     else
@@ -72,7 +75,7 @@ function getBatchSize(c::ConvFFT{<:Any,<:Real})
     end
 end
 
-function getBatchSize(c::ConvFFT{<:Any, <:Complex})
+function getBatchSize(c::ConvFFT{D, OT, A, B, C, PD, P}) where {D, OT, A, B, C, PD, P<:Tuple}
     if typeof(c.fftPlan[1]) <:Tuple
         return c.fftPlan[1][2][end]
     else

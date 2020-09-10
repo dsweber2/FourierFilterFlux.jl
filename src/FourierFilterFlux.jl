@@ -1,6 +1,6 @@
 module FourierFilterFlux
 # TODO: drop useGpu, since we can just pipe through gpu now
-# using Reexport 
+using Reexport 
 # @reexport using CUDA
 using CUDA
 using Zygote, Flux, Shearlab, LinearAlgebra
@@ -58,6 +58,10 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
                  dType=Float32, trainable=true, OT=Float32, 
                  An=nothing) where {T,N}
     @assert length(originalSize) >= N-1
+    if dType <: Complex
+        OT = dType
+    end
+
     if length(originalSize) == N-1
         exSz = (originalSize..., 1) # default number of channels is 1
     else
@@ -99,14 +103,14 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
     w = init(effSize..., nOutputChannels)
     b = init(k[(nConvDims+1):end-1]..., nOutputChannels)
     if useGpu
-        w = cu(w)
-        b = cu(b)
+        w = gpu(w)
+        b = gpu(b)
     end
     ConvFFT(w, b, k, σ, plan = plan, boundary = boundary, dType = dType,
             trainable=trainable, OT=OT)
 end
 
-function Base.show(io::IO, l::ConvFFT{<:Any, <:Real})
+function Base.show(io::IO, l::ConvFFT)
     # stored as a brief description
     if typeof(l.fftPlan)<:Tuple 
         sz = l.fftPlan[2]
@@ -120,7 +124,7 @@ function Base.show(io::IO, l::ConvFFT{<:Any, <:Real})
           "bc=$(l.bc)]")
 end
 
-function Base.show(io::IO, l::ConvFFT{<:Any, <:Complex})
+function Base.show(io::IO, l::ConvFFT{D, OT, A, B, C, PD, P}) where {D, OT, A, B, C, PD, P<:Tuple}
     if typeof(l.fftPlan[1])<:Tuple
         sz = l.fftPlan[1][2]
     else
