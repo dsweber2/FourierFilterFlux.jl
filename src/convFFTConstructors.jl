@@ -75,16 +75,18 @@ end
 #######################################################################
 
 """
-    waveletLayer(n::Integer, m::Integer, channelsIn::Integer; scale=4,
-                  shearLevels = scale, batchSize = 10, useGpu = true, dType
-                  = Float32, σ = abs, trainable = false, plan = true)
+    waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
+                 dType = Float32, σ = identity, trainable = false,
+                 plan = true, init = Flux.glorot_normal, bias=false,
+                 boundary=Sym(), cw = Morlet(), averagingLayer = false,
+                 varargs...) where {N,T}
 
-create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't trainable
+create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't trainable. varargs are any of the settings that can be passed on to creating a `CFW` type.
 """
 function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
                       dType = Float32, σ = identity, trainable = false,
                       plan = true, init = Flux.glorot_normal, bias=false,
-                      boundary=Sym(), cw = WT.Morlet(), averagingLayer = false,
+                      boundary=Sym(), cw = Morlet(), averagingLayer = false,
                       varargs...) where {N,T} 
     waveletType = wavelet(cw; varargs...)
     wavelets,ω = computeWavelets(inputSize[1], waveletType; T=T)

@@ -14,7 +14,7 @@ function f(inputSize, cw, β, normalization, scale)
                         normalization=normalization, decreasing=β)
     end
 
-    if (typeof(cw) <: Union{WT.Morlet, WT.Paul})
+    if (typeof(cw) <: Union{Morlet, Paul})
         @test analytic(W)
     end
     xCu = x
@@ -34,7 +34,7 @@ function f(inputSize, cw, β, normalization, scale)
     end
 end
 @testset "Wavelets.jl construction and application" begin
-    CWs = [WT.Morlet(), WT.Morlet(4π), WT.dog1, WT.paul16]
+    CWs = [Morlet(), Morlet(4π), dog1, paul16]
     inputSizes = ((305,2),(256,1,4))
     scales = [1,8,12]
     averagingLengths =(0, 2, 4)

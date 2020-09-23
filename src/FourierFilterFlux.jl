@@ -5,7 +5,7 @@ using Reexport
 using CUDA
 using Zygote, Flux, Shearlab, LinearAlgebra
 using AbstractFFTs, FFTW #TODO: check the license on FFTW and such
-using Wavelets
+using ContinuousWavelets
 using Flux
 using Adapt
 using RecipesBase
