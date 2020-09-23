@@ -95,25 +95,93 @@ function adapt(Atype, x::T) where T<:CUDA.CUFFT.CuFFTPlan
     end
     return newX
 end
-
-# A plotting method to show all the filters
-@recipe function f(cv::ConvFFT; vis=1, dispReal=false, apply=abs,restrict=(:,:))
-    if dispReal
-        apply.(irfft(cpu(cv.weight[:,:,vis]), size(cv.fftPlan,1), (1,2)))[restrict...]
+function fromRestrictLocs(restrict,z,i)
+    if typeof(restrict[i]) <: Colon
+        return 1:size(z,i)
     else
-        apply.(cpu(cv.weight[:,:,vis]))[restrict...]
+        return restrict[i]
     end
+end
+@recipe function f(x,y,cv::ConvFFT{2}; vis=1, dispReal=false,
+                   apply=abs, restrict=(Colon(), Colon()))
+    restrict = (restrict..., vis)
+    w = cv.weight
+    z = dispReal ?
+        apply.(irfft(cpu(w), size(cv.fftPlan,1),
+                     (1,2)))[restrict...] :
+                         apply.(ifftshift(cpu(w),2))[restrict...]
+    (x,y,z)
+end
+@recipe function f(cv::ConvFFT{2}; vis=1, dispReal=false,
+                   apply=abs, restrict=(Colon(), Colon()))
+    restrict = (restrict..., vis)
+    w = cv.weight
+    z = dispReal ?
+                apply.(ifftshift(irfft(cpu(w), size(cv.fftPlan,1),
+                                  (1,2)), (1,2)))[restrict...] :
+                apply.(ifftshift(cpu(w),2))[restrict...]
+    xSz = fromRestrictLocs(restrict,z,2)
+    x = dispReal ? xSz :
+               range(xSz[1]-size(w,2)/2, stop = xSz[2]-size(w,2)/2, 
+                     length = length(xSz))
+    y = fromRestrictLocs(restrict,z,1)
+    (x,y,z)
+end
+
+@recipe function f(x, cv::ConvFFT{1}; vis=1, dispReal=false,
+                   apply=abs, restrict=(Colon(), vis))
+    w = cv.weight
+    if typeof(cv.fftPlan) <: Tuple
+        origSize = size(cv.fftPlan[1], 1)
+    else
+        origSize = size(cv.fftPlan, 1)
+    end
+
+    z = dispReal ?
+                apply.(irfft(cpu(w), origSize,
+                             (1, )))[restrict...] :
+                apply.(cpu(w))[restrict...]
+    (x, z)
+end
+@recipe function f(cv::ConvFFT{1}; vis=1, dispReal=false,
+                   apply=abs, restrict=(Colon(), vis))
+    w = cv.weight
+    if typeof(cv.fftPlan) <: Tuple
+        origSize = size(cv.fftPlan[1], 1)
+    else
+        origSize = size(cv.fftPlan, 1)
+    end
+
+    z = dispReal ?
+                apply.(irfft(cpu(w), origSize,
+                             (1, )))[restrict...] :
+                apply.(cpu(w))[restrict...]
+
+    x = 1:size(z,1)
+    (x, z)
 end
 
 
+"""
+    positive_glorot_uniform(dims...)
+same idea as a glorot_uniform, but limited to strictly positive entries.
+"""
 positive_glorot_uniform(dims...) = 
     (rand(Float32,dims...) .* sqrt(2.0f0 / sum(Flux.nfan(dims...))))
-# distributed about uniform for all
+
+"""
+    uniform_perturbed_gaussian(dims...)
+If there are ``n`` total entries in the matrix, each entry is gaussian distributed with a mean of ``¹/ₙ`` and a standard deviation of ``\\frac{1}{10·n}``
+"""
 function uniform_perturbed_gaussian(dims...)
     netSize = prod(dims)
     A = 1 ./netSize  .+ randn(dims)./netSize/10;
     A = Float32.(A./norm(A))
 end
+"""
+    iden_perturbed_gaussian(dims...)
+an identity along the diagonal with Gaussian deviations of standard deviation ``\\frac 1 {100}`` everywhere
+"""
 function iden_perturbed_gaussian(dims...) # only works for the 2d case
     m = minimum(dims)
     netSize = prod(dims) 
@@ -124,6 +192,4 @@ function iden_perturbed_gaussian(dims...) # only works for the 2d case
     end
 end
 # doubly stochastic matrix (Probably more work than it's worth)
-
-
 

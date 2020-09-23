@@ -69,8 +69,8 @@
 
         ax = axes(x̂)[3:end-1]
         ∇ = gradient((x̂) -> FourierFilterFlux.argWrapper(x̂, shears.weight[:,:,1], usedInds,
-                                                          shears.fftPlan, (ax, 1),
-                                                          shears.bias, shears.analytic)[1,1,1,1,1], x̂) 
+                                                          shears.fftPlan, 
+                                                          shears.bias, FourierFilterFlux.NonAnalyticMatching())[1,1,1,1,1], x̂) 
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
 
         ∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
@@ -159,7 +159,7 @@ end
         @test size(shears.fftPlan)== originalSize
         @test shears.σ == abs
         @test shears.bias == nothing
-        @test typeof(shears.bc)<:Periodic
+        @test typeof(shears.bc)<:FourierFilterFlux.Periodic
         @test params(shears).order[1] == shears.weight
         x = randn(21,1,10)
         ∇ = gradient((x)->shears(x)[1,1,1,3], x)
@@ -190,6 +190,7 @@ end
         x = randn(Float32,21,1,10)
         @test shears(x)[:,1,:,:] ≈ x
     end
+
     # check that global multiplication in the Fourier domain is just multiplication
     @testset "times 2" begin
 
@@ -215,6 +216,8 @@ end
         x = randn(Float32,21,1,10)
         @test shears(x)[:,1,:,:] ≈ 2 .* x
     end
+
+
     using FourierFilterFlux:applyWeight, applyBC, internalConvFFT
     weight = 2 .* ones(Complex{Float32}, (21+10)>>1+1, 1)
     bc = Pad(5)
@@ -232,78 +235,76 @@ end
     
     # no bias, analytic (so complex valued)
     fftPlan = plan_fft(xbc, (1,))
-    applyWeight(x̂,weight[:,1], usedInds, fftPlan, nothing, true)[1,1,1,1]
     ∇ = gradient((x̂) -> abs(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
-                                        nothing, true)[1,1,1,1]),
+                                        nothing, FourierFilterFlux.AnalyticWavelet())[1,1,1,1]),
                  x̂)
     @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
 
     # no bias, not analytic, complex valued, but still symmetric
-fftPlan = plan_fft(xbc, (1,))
-applyWeight(x̂,weight[:,1], usedInds, fftPlan, nothing, 1)[1,1,1,1]
-∇ = gradient((x̂) -> real(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
-                                     nothing, true)[1,1,1,1]),
-             x̂)
-@test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+    fftPlan = plan_fft(xbc, (1,))
+    ∇ = gradient((x̂) -> real(applyWeight(x̂,weight[:,1], usedInds, fftPlan, 
+                                         nothing, FourierFilterFlux.RealWaveletRealSignal())[1,1,1,1]),
+                 x̂)
+    @test minimum(abs.(∇[1][2:end, 1,1]).≈ 2*2f0/31)
+    @test abs(∇[1][1, 1,1]) ≈ 2f0/31
 
+    # internal methods tests
+    weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
+    padding = 5
+    shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
+                    plan=true, boundary = Pad(padding))
+    x = randn(21,1,10)
+    x̂ = pad(x, shears.bc.padBy); 
+    x̂ = shears.fftPlan *ifftshift(x̂,(1,2))
+    usedInds = (shears.bc.padBy[1] .+ (1:size(x, 1)),)
+    nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
+                                                shears.fftPlan,
+                                                shears.bias, shears.analytic);
+    ∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
+                                                        shears.weight,
+                                                        usedInds,
+                                                        shears.fftPlan,
+                                                        shears.bias, shears.analytic)[1,1,1,1,1],
+                x̂)
+    @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
+    # 
 
-# internal methods tests
-weightMatrix = 2 .* ones(Float32, (21+10)>>1+1, 1)
-padding = 5
-shears = ConvFFT(weightMatrix, nothing, originalSize, identity,
-                 plan=true, boundary = Pad(padding))
-x = randn(21,1,10)
-x̂ = pad(x, shears.bc.padBy); 
-x̂ = shears.fftPlan *ifftshift(x̂,(1,2))
-usedInds = (shears.bc.padBy[1] .+ (1:size(x, 1)),)
-nextLayer = FourierFilterFlux.internalConvFFT(x̂, shears.weight, usedInds,
-                                              shears.fftPlan,
-                                              shears.bias, shears.analytic);
-∇ = gradient((x̂)->FourierFilterFlux.internalConvFFT(x̂,
-                                                    shears.weight,
-                                                    usedInds,
-                                                    shears.fftPlan,
-                                                    shears.bias, shears.analytic)[1,1,1,1,1],
-             x̂)
-@test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
-# 
+    # no bias, not analytic and real valued output
+    # no bias, analytic (so complex valued)
+    # no bias, not analytic, complex valued, but still symmetric
+    # biased (and one of the others, doesn't matter which)
 
-# no bias, not analytic and real valued output
-# no bias, analytic (so complex valued)
-# no bias, not analytic, complex valued, but still symmetric
-# biased (and one of the others, doesn't matter which)
+    ∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
+    @test minimum(abs.(∇[1][:, :, 1,1]).≈ 1f0/31*2)
+    sheared = shears(x)
+    @test size(sheared) == (21,1,1,10)
 
-∇ = gradient((x̂) -> (shears.fftPlan \ (x̂ .* shears.weight[:,:,1]))[1,1,1,1], x̂)
-@test minimum(abs.(∇[1][:, :, 1,1]).≈ 1f0/31*2)
-sheared = shears(x)
-@test size(sheared) == (21,1,1,10)
+    # convert to a gpu version
+    gpuVer = shears |> gpu
+    # TODO: this isn't implemented quite yet
+    @test typeof(gpuVer.weight) <: Flux.CuArray
+    @test typeof(gpuVer.fftPlan) <: CUDA.CUFFT.rCuFFTPlan
 
-# convert to a gpu version
-gpuVer = shears |> gpu
-# TODO: this isn't implemented quite yet
-@test typeof(gpuVer.weight) <: Flux.CuArray
-@test typeof(gpuVer.fftPlan) <: CUDA.CUFFT.rCuFFTPlan
+    # extra channel dimension
+    originalSize = (20,16, 1,10)
+    shears = ConvFFT(randn(Float32, 16, 3), nothing, originalSize, abs,
+                    plan=true, boundary = Pad(5), trainable=false)
+    @test size(shears.fftPlan)== originalSize .+ (10, 0, 0, 0)
+    @test shears.σ == abs
+    @test shears.bias == nothing
+    @test shears.bc.padBy == (5,)
+    wSize = ((originalSize[1] + (10)) >>1 +1, 3)
+    @test size(shears.weight) == wSize
 
-# extra channel dimension
-originalSize = (20,16, 1,10)
-shears = ConvFFT(randn(Float32, 16, 3), nothing, originalSize, abs,
-                 plan=true, boundary = Pad(5), trainable=false)
-@test size(shears.fftPlan)== originalSize .+ (10, 0, 0, 0)
-@test shears.σ == abs
-@test shears.bias == nothing
-@test shears.bc.padBy == (5,)
-wSize = ((originalSize[1] + (10)) >>1 +1, 3)
-@test size(shears.weight) == wSize
-
-# random initialization
-originalSize = (20, 16, 1, 10)
-shears = ConvFFT(originalSize, 3, abs,
-                 plan=true, boundary = Pad(5), nConvDims=1)
-@test size(shears.fftPlan)== originalSize .+ (10, 0, 0, 0)
-@test shears.σ == abs
-@test size(shears.bias) == (originalSize[2:end-1]..., 3)
-@test shears.bc.padBy == (5,)
-wSize = ((originalSize[1] + 10)>>1 + 1, 3)
-@test size(shears.weight) == wSize
-end
+    # random initialization
+    originalSize = (20, 16, 1, 10)
+    shears = ConvFFT(originalSize, 3, abs,
+                    plan=true, boundary = Pad(5), nConvDims=1)
+    @test size(shears.fftPlan)== originalSize .+ (10, 0, 0, 0)
+    @test shears.σ == abs
+    @test size(shears.bias) == (originalSize[2:end-1]..., 3)
+    @test shears.bc.padBy == (5,)
+    wSize = ((originalSize[1] + 10)>>1 + 1, 3)
+    @test size(shears.weight) == wSize
+    end
 end

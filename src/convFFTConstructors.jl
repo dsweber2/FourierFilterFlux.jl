@@ -2,9 +2,11 @@
 
 
 """
-    shearingLayer(n::Integer, m::Integer, channelsIn::Integer; scale=4,
-                  shearLevels = scale, batchSize = 10, useGpu = true, dType
-                  = Float32, σ = abs, trainable = false, plan = true)
+shearingLayer(inputSize::Union{Int,NTuple{N, T}}; 
+                       scale = -1, shearLevel = scale, useGpu = true,
+                       dType = Float32, σ = abs, trainable = false,
+                       plan = true, boundary=Pad(-1,-1), 
+                       averagingLayer = false) where {N,T}
 
 create a ConvFFT layer that uses shearlets. By default it isn't trainable
 
@@ -40,9 +42,6 @@ function shearingLayer(inputSize::Union{Int,NTuple{N, T}};
     bias = nothing
 
     if useGpu
-        println("here")
-        println("$(typeof(shearlets)), $(size(shearlets))")
-        #println("$(typeof(gpu(shearlets)))")
         if dType<:Real
             shearlets = Complex{dType}.(shearlets)# correct the element type
         else
@@ -103,7 +102,7 @@ function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; useGpu = false,
         wavelets = dType.(wavelets)
     end
 
-    if typeof(cw) <: WT.Dog && false
+    if typeof(cw) <: Dog && false
         OT = dType
         An = nothing
     else

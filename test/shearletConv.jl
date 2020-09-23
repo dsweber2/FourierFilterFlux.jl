@@ -78,7 +78,6 @@ end
     dType = Float32
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
         @testset "inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)" begin
-            println("inputSize=$inputSize, (scale, shearLevel) =$((scale,shearLevel)),useGpu=$useGpu, σm=$(σm)")
             shears=3
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears

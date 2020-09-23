@@ -1,4 +1,3 @@
-#using Revise
 using FourierFilterFlux
 using Flux, FFTW, CUDA, Shearlab, Wavelets
 using Logging, Test, LinearAlgebra

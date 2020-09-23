@@ -1,4 +1,4 @@
-cw = WT.Morlet(); β = 4.0; averagingLength = 2; normalization = Inf; scale = 8;
+cw = Morlet(); β = 4.0; averagingLength = 2; normalization = Inf; scale = 8;
 inputSize = (305,2)
 function f(inputSize, cw, β, normalization, scale)
     x = randn(Float32,inputSize)
