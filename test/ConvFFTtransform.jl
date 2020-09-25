@@ -3,7 +3,7 @@
         originalSize = (10,10,1,2)
         tmp = zeros(originalSize);
         init = cu(zeros(originalSize)); init[5,5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize,useGpu=true)
+        shears = ConvFFT(originalSize) |> gpu
         res = shears(init);
         @test size(res) == (10,10,5,1,2)
         # TODO: for the other boundary conditions. This is just periodic
@@ -18,7 +18,7 @@
         #@info "" minimum(res), minimum(minimalTransform(shears, init))
         @test minimalTransform(shears, init) ≈ res
 
-        shears = ConvFFT(originalSize, 5, abs, useGpu=true)
+        shears = ConvFFT(originalSize, 5, abs) |> gpu
         res = shears(init);
         @test abs.(minimalTransform(shears, init)) ≈ res
     end
@@ -26,8 +26,7 @@
         originalSize = (10,1,2)
         tmp = zeros(originalSize); tmp
         init = cu(zeros(originalSize)); init[5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize, nConvDims=1, useGpu=true,
-                         boundary=Pad(-1))
+        shears = ConvFFT(originalSize, nConvDims=1, boundary=Pad(-1)) |> gpu
         res = shears(init);
         @test size(res) == (10,5,1,2)
         # TODO: this is only padded
@@ -43,8 +42,8 @@
         end
         @test minimalTransform(shears, init) ≈ res
 
-        shears = ConvFFT(originalSize, 5, abs, useGpu=true, nConvDims=1,
-                         boundary=Pad(-1))
+        shears = ConvFFT(originalSize, 5, abs, nConvDims=1,
+                         boundary=Pad(-1)) |> gpu
         res = shears(init);
         @test abs.(minimalTransform(shears, init)) ≈ res
     end

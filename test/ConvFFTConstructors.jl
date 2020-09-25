@@ -28,7 +28,7 @@
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs, 
                          boundary = Pad(padding),trainable=false)
         @test isempty(params(shears))
-
+        
         x = randn(21,11,1,10)
         ∇ = gradient((x)->shears(x)[1,1,1,1,3], x)
         @test minimum(∇[1][:,:,:, [1:2..., 4:10...]] .≈ 0)
@@ -225,10 +225,11 @@ end
     xbc, usedInds = applyBC(x, bc, 1)
     x̂ = rfft(xbc, (1,))
     fftPlan = plan_rfft(xbc, (1,))
+    An = map(x->FourierFilterFlux.NonAnalyticMatching(), (1:size(weight)[end]...,))
     nextLayer = internalConvFFT(x̂, weight, usedInds, fftPlan,
-                                nothing, nothing);
+                                nothing, An);
     ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
-                                        nothing, nothing)[1,1,1,1,1],
+                                        nothing, An)[1,1,1,1,1],
                  x̂)
     @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
     # no bias, not analytic and real valued output

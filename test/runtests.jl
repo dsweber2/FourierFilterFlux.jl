@@ -1,4 +1,4 @@
-using FourierFilterFlux
+using FourierFilterFlux, ContinuousWavelets
 using Flux, FFTW, CUDA, Shearlab, Wavelets
 using Logging, Test, LinearAlgebra
 

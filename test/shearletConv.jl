@@ -1,4 +1,4 @@
-scale =4; shearLevel = 3; inputSize = (25,25,1,2); useGpu = true; σm =relu; dType=Float32
+scale =1; shearLevel = 1; inputSize = (25,25,1,2); useGpu = true; σm =identity; dType=Float32
 cpuShears = 3; singleRes = 3; shears = 3
 # standard input size
 @testset "shearing constructors tiny" begin
@@ -14,7 +14,7 @@ cpuShears = 3; singleRes = 3; shears = 3
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears
                 shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                                       useGpu = useGpu, dType = dType, σ=σm)
+                                       dType = dType, σ=σm)
             end
             @test size(shears.fftPlan) == 
                 inputSize .+ (2 .* shears.bc.padBy...,
@@ -25,10 +25,11 @@ cpuShears = 3; singleRes = 3; shears = 3
             @test outType(shears)<:Real
             if useGpu
                 init = gpu(randn(dType, inputSize));
+                shears = shears |> gpu
             else
                 init = randn(dType, inputSize);
             end
-
+            
             fullResult = shears(init);
             @test size(fullResult) == (inputSize[1:2]...,size(shears.weight,3),
                                        inputSize[3:end]...)
@@ -52,11 +53,13 @@ cpuShears = 3; singleRes = 3; shears = 3
             # just the averaging filter
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears
-                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, useGpu =
-                                       useGpu, dType = dType, σ=σm, averagingLayer=true)
+                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, 
+                                       dType = dType, σ=σm, averagingLayer=true)
             end
             @test size(shears.weight, 3) ==1
-            
+            if useGpu
+                shears = shears |> gpu
+            end
             singleRes = 3
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global singleRes
@@ -68,7 +71,7 @@ cpuShears = 3; singleRes = 3; shears = 3
     end
 end
 
-#inputSize=(400, 400, 1, 2); (scale, shearLevel) =(1, 1);useGpu=true; σm=identity
+inputSize=(400, 400, 1, 2); (scale, shearLevel) =(1, 1);useGpu=true; σm=identity
 @testset "shearing constructors large" begin
     # realistic size example
     inputSizes = [(400,400,1,2)]
@@ -82,7 +85,10 @@ end
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears
                 shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-                useGpu = useGpu, dType = dType, σ=σm)
+                                       dType = dType, σ=σm)
+            end
+            if useGpu
+                shears = shears |> gpu
             end
             @test size(shears.fftPlan) == inputSize .+ (2 .* shears.bc.padBy...,
                                                         fill(0, length(inputSize)-2)...)
@@ -113,8 +119,7 @@ end
             @test σm.(res) ≈ cpu(fullResult)
             # just the averaging filter
             shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
-            useGpu = useGpu, dType = dType, σ=σm,
-            averagingLayer=true)       
+                                   dType = dType, σ=σm, averagingLayer=true) |> gpu
             @test size(shears.fftPlan)== inputSize .+ (2 .* shears.bc.padBy...,
             fill(0, length(inputSize)-2)...)
             @test shears.σ == σm

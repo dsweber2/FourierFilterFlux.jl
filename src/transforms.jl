@@ -45,20 +45,20 @@ struct RealWaveletComplexSignal <: TransformTypes end
 struct NonAnalyticMatching <: TransformTypes end
 
 function internalConvFFT(x̂, shears::AbstractArray{<:Number, N}, usedInds,
-                         fftPlan, bias, An) where N
+                         fftPlan, bias, isAnalytic) where N
     axShear = axes(shears)
     axx = axes(x̂)[N:end-1]
-    if typeof(An) <: Tuple
-        if size(shears,1) == size(x̂, 1)
-            averagingStyle = RealWaveletRealSignal()
-        else
-            averagingStyle = RealWaveletComplexSignal()
-        end
-        isAnalytic = map(ii->((ii in An) ? averagingStyle() :
-                         AnalyticWavelet()), (1:size(shears)[end]...,)) 
-    else
-        isAnalytic = map(x->NonAnalyticMatching(), (1:size(shears)[end]...,))
-    end
+    # if typeof(An) <: Tuple
+    #     if size(shears,1) == size(x̂, 1)
+    #         averagingStyle = RealWaveletRealSignal
+    #     else
+    #         averagingStyle = RealWaveletComplexSignal
+    #     end
+    #     isAnalytic = map(ii->((ii in An) ? averagingStyle() :
+    #                      AnalyticWavelet()), (1:size(shears)[end]...,)) 
+    # else
+    #     isAnalytic = map(x->NonAnalyticMatching(), (1:size(shears)[end]...,))
+    # end
     x̂ = hook(x->dem(x,"noop"), x̂)
     łλ(ii,bias)= argWrapper(x̂, shears[axShear[1:end-1]..., ii], usedInds, 
                        fftPlan, bias[ii], isAnalytic[ii])

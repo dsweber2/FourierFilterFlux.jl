@@ -1,5 +1,4 @@
 module FourierFilterFlux
-# TODO: drop useGpu, since we can just pipe through gpu now
 using Reexport 
 # @reexport using CUDA
 using CUDA
@@ -14,10 +13,14 @@ using Base: tail
 import Adapt: adapt
 export pad, poolSize, originalDomain, params!, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
-# layer types
+# layer types and constructors
 export ConvFFT, waveletLayer, shearingLayer, averagingLayer
 # inits
-export positive_glorot_uniform, iden_perturbed_gaussian, uniform_perturbed_gaussian
+export positive_glorot_uniform, iden_perturbed_gaussian, 
+    uniform_perturbed_gaussian
+# Analytic types
+export TransformTypes, AnalyticWavelet, RealWaveletRealSignal, 
+    RealWaveletComplexSignal, NonAnalyticMatching
 # utils
 export effectiveSize, originalSize
 
@@ -31,7 +34,7 @@ include("boundaries.jl")
     # randomly constructed filters
     ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
             σ=identity; nConvDims=2, init = Flux.glorot_normal,
-            useGpu=false, plan=true, bias = true,
+            plan=true, bias = true,
             dType=Float32, OT=Float32, boundary=Periodic(), 
             trainable=true, An=nothing) where N
 
@@ -64,9 +67,6 @@ fourier domain according to the distribution `init`.
                     for analytic wavelets. For both `waveletLayer` and 
                     `shearingLayer`, this is the last filter, so if there are
                     18 total wavelets, `An=(18,)`.
-- `useGpu::Bool=false`: for the second, randomly constructed filters, we need to
-                    know whether these should be sent to the GPU or if they will 
-                    remain on the CPU.
 - `bias::Bool=true`: for the second constructor only, determines whether or not
                     to create a bias.
 - `init::function=Flux.glorot_normal`: for the second constructor only. The way 
@@ -129,6 +129,9 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
     else
         fftPlan = nothing
     end
+    if typeof(An) <: Nothing
+        An = map(x->NonAnalyticMatching(), (1:size(w)[end]...,))
+    end
 
     return ConvFFT{N-1, OT, typeof(σ), typeof(w), typeof(b), 
                    typeof(boundary), typeof(fftPlan), 
@@ -138,28 +141,25 @@ end
 
 function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5,
                  σ=identity; nConvDims=2, init = Flux.glorot_normal,
-                 useGpu=false, plan=true, bias = true,
+                 plan=true, bias = true,
                  dType=Float32, OT=Float32, boundary=Periodic(), 
                  trainable=true, An=nothing) where N
 
     effSize, boundary = effectiveSize(k[1:nConvDims], boundary)
-    if dType <: Real
+    if dType <: Real && OT <: Real
         effSize = (effSize[1] >>1 + 1, effSize[2:end]...)
     end
-    w = init(effSize..., nOutputChannels)
+    w = init(effSize..., nOutputChannels) .+
+        im .* init(effSize..., nOutputChannels)
+
     if bias == true
-        b = init(k[(nConvDims+1):end-1]..., nOutputChannels)
-        if useGpu
-            b = gpu(b)
-        end
+        b = init(k[(nConvDims+1):end-1]..., nOutputChannels) 
     else
         b = nothing
     end
-    if useGpu
-        w = gpu(w)
-    end
+
     ConvFFT(w, b, k, σ, plan = plan, boundary = boundary, dType = dType,
-            trainable=trainable, OT=OT)
+            trainable=trainable, OT=OT, An=An)
 end
 
 function Base.show(io::IO, l::ConvFFT)

@@ -1,6 +1,6 @@
-cw = Morlet(); β = 4.0; averagingLength = 2; normalization = Inf; scale = 8;
+cw = Morlet(); β = 1.0; averagingLength = 0; normalization = Inf; scale = 1;
 inputSize = (305,2)
-function f(inputSize, cw, β, normalization, scale)
+function f(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32,inputSize)
     W= 3; waves = 4
     # for the purpose of testing, we don't need the wall of warnings
@@ -19,6 +19,7 @@ function f(inputSize, cw, β, normalization, scale)
     end
     xCu = x
     wFFF = W(xCu);
+
     wWave = 5;
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
         # global wWave
@@ -28,7 +29,12 @@ function f(inputSize, cw, β, normalization, scale)
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale 
     end
-    testRes = @test norm((cpu(wFFF)-wWave[:,[2:end..., 1], axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
+    if averagingLength == 0
+        reord = 1:size(wWave,2)
+    else
+        reord = [2:size(wWave,2)..., 1]
+    end
+    testRes = @test norm((cpu(wFFF)-wWave[:, reord, axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale 
     end
@@ -43,9 +49,9 @@ end
     σs =[identity, abs, relu]
     
     for inputSize in inputSizes, cw in CWs, β in βs, normalization in
-        normalizations, scale in scales
+        normalizations, scale in scales, averagingLength in averagingLengths
         @testset "inputSize=$inputSize, cw =$(cw), β=$β" begin
-            f(inputSize, cw, β, normalization, scale)
+            f(inputSize, cw, β, normalization, scale, averagingLength)
         end
     end
 end

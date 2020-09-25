@@ -119,10 +119,10 @@ end
     z = dispReal ?
                 apply.(ifftshift(irfft(cpu(w), size(cv.fftPlan,1),
                                   (1,2)), (1,2)))[restrict...] :
-                apply.(ifftshift(cpu(w),2))[restrict...]
+                apply.(cpu(w))[restrict...]
     xSz = fromRestrictLocs(restrict,z,2)
     x = dispReal ? xSz :
-               range(xSz[1]-size(w,2)/2, stop = xSz[2]-size(w,2)/2, 
+               range(xSz[1]-size(w,2)/2, stop = xSz[2]+size(w,2)/2, 
                      length = length(xSz))
     y = fromRestrictLocs(restrict,z,1)
     (x,y,z)
