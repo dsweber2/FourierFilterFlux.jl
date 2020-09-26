@@ -72,11 +72,11 @@
         end
     end
 end
-
+inputSize = (400,400,1,2); (scale, shearLevel) =(8,8); useGpu=false;  σm =identity
 @testset "shearing constructors large" begin
     # realistic size example
     inputSizes = [(400,400,1,2)]
-    scalesShears = [(1,1), (2,2), (4,4), (8,1), (8,4), (8,8)]
+    scalesShears = [(1,1), (2,2), (4,4), (8,1), (8,4)]
     if CUDA.functional()
         useGpus = [true, false]
     else
