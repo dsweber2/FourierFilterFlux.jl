@@ -18,3 +18,13 @@ jobs:
   allow_failures:
     - julia: nightly
   fast_finish: true
+  include:
+    - stage: "Documentation"
+      julia: 1.5
+      os: linux
+      script:
+        - julia --project=docs/ -e 'using Pkg;
+                                    Pkg.develp(PakcageSpec(path=pwd()));
+                                    Pkg.instantiate()'
+        - juila --project=docs/ docs/make.jl
+      after_success: skip

@@ -38,15 +38,16 @@ include("boundaries.jl")
             dType=Float32, OT=Float32, boundary=Periodic(), 
             trainable=true, An=nothing) where N
 
-Similar to `Conv`, but does pointwise multiplication in the Fourier domain, with 
-boundary conditions `boundary`, and applies the nonlinearity `σ`. It is worth 
-noting that the bias is added in the Fourier domain; if you don't want a bias,
-set `b=nothing`. For the first 
-method, the weights `w` should have dimension 1 greater than the size of the 
-convolution, while for the second, `k` gives the size of the input (including 
-channels and batch size), for which appropriate weights are generated in the 
-fourier domain according to the distribution `init`. 
-# Arguments
+Similar to `Conv` from Flux.jl, but does pointwise multiplication in the
+Fourier domain, with boundary conditions `boundary`, and applies the
+nonlinearity `σ`. It is worth noting that the bias is added in the Fourier
+domain; if you don't want a bias, set `b=nothing`. For the first method, the
+weights `w` should have dimension 1 greater than the size of the convolution,
+while for the second, `k` gives the size of the input (including channels and
+batch size), for which appropriate weights are generated in the fourier domain
+according to the distribution `init`.
+# Shared Arguments
+- `σ=identity`: a function to apply.
 - `dType::DataType=Float32`: the data type being input. By default, it assumes 
                             both the filter and the signal are real, which 
                             allows us to use an rfft and half the (complex)
@@ -67,16 +68,26 @@ fourier domain according to the distribution `init`.
                     for analytic wavelets. For both `waveletLayer` and 
                     `shearingLayer`, this is the last filter, so if there are
                     18 total wavelets, `An=(18,)`.
-- `bias::Bool=true`: for the second constructor only, determines whether or not
-                    to create a bias.
-- `init::function=Flux.glorot_normal`: for the second constructor only. The way 
-                    to initialize both the bias (if defined) and the weights. 
-                    Any function that results in a matrix is allowed, though I 
-                    would suggest something from Flux, or one of the ones 
-                    defined here.
-- `nConvDims::Integer`: for the second constructor only. the number of 
-                    dimensions that we will be doing the convolution over, as 
-                    `k` is somewhat ambiguous.
+# First constructor only
+
+- `w::AbstractArray{T,N}`: the weights. should be `D+1`, with the last
+                           dimension being the total number of filters
+` `b::Union{Nothing,AbstractArray}`: if `nothing`, no bias is added. Otherwise it should be (input channels)×(output channels) 
+# Second constructor only
+- `k::NTuple{N,Integer}`: the dimensions of the input. In the 1D case it should
+                          be three entries e.g. `(132,3,100)` which is
+                          (signal)×(channels)×(examples). In the 2D case it
+                          should be four entries e.g. `(132,132,3,100)`, which
+                          is (x)×(y)×(channels)×(examples).
+- `nOutputChannels::Integer=5`: the number of filters to use.
+
+- `bias::Bool=true`: determines whether or not to create a bias.
+- `init::function=Flux.glorot_normal`: The way to initialize both the bias (if
+                    defined) and the weights.  Any function that results in a
+                    matrix is allowed, though I would suggest something from
+                    Flux, or one of the ones defined in this package.
+- `nConvDims::Integer`: the number of dimensions that we will be doing the
+                    convolution over, as `k` is somewhat ambiguous.
 """
 struct ConvFFT{D, OT, F, A, V, PD, P, T, An}
     σ::F

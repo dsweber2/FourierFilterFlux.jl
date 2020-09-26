@@ -6,6 +6,11 @@ struct Periodic <: ConvBoundary end
 struct Pad{N} <: ConvBoundary 
     padBy::NTuple{N,Int}
 end
+"""
+    Pad(x::Vararg{<:Integer, N}) where N = Pad{N}(x)
+
+N gives the number of dimensions of convolution, while `x` gives the specific amount to pad in each dimension (done on both sides). If the values in `x` are negative, then the support of the filters will be determined automataically
+"""
 Pad(x::Vararg{<:Integer, N}) where N = Pad{N}(x)
 import Base.ndims
 ndims(p::Pad{N}) where N = N
@@ -17,7 +22,10 @@ end
 # as in the DCT2 TODO: implement this in a way that is as space efficient as a DCT2, instead of doubling things
 struct Sym <: ConvBoundary end
 
-# size methods. given the size from the fft, return the size of the input
+"""
+    originalSize(sz, boundary::ConvBoundary)
+Given the size `sz` from the fft, return the size of the input.
+"""
 function originalSize(sz, boundary::Pad{N}) where N
     return sz .- 2 .* boundary.padBy#([sz[ii]-2*p for p in boundary.padBy]..., )
 end
@@ -31,7 +39,10 @@ function originalSize(sz, boundary::Sym) where N
     return Int.(sz./2) #([Int(sz[ii]/2) for p in boundary.padBy]..., )
 end
 
-# size methods. given the input size, figure out the resulting size
+"""
+    effectiveSize(sz, boundary::ConvBoundary)
+Given the input size, figure out the resulting size
+"""
 function effectiveSize(sz, boundary::Pad{N}) where N
     if boundary.padBy[1]>0
         return sz .+ 2 .* boundary.padBy, boundary

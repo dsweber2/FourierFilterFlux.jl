@@ -8,14 +8,26 @@ shearingLayer(inputSize::Union{Int,NTuple{N, T}};
                        plan = true, boundary=Pad(-1,-1), 
                        averagingLayer = false) where {N,T}
 
-create a ConvFFT layer that uses shearlets. By default it isn't trainable
+create a ConvFFT layer that uses shearlets from [Shearlab.jl](https://arsenal9971.github.io/Shearlab.jl/). By default it isn't trainable. 
+# New Arguments 
+- `scale::Integer=-1`: gives the number of scales to compute. If this is `-1`,
+                       it is computed automatically based on the image size,
+                       with 2 scales if the image is smaller than 24, and 4
+                       otherwise -
 
-if averagingLayer is true, create a ConvFFT layer that uses just the single averaging shearlet. By default it isn't trainable.
+- `shearLevel::Integer=scale`: controls the number of shearing levels to use at
+                               each scale. Should roughly correspond to how far
+                               to shear in one direction at the finest scale.
+- `averagingLayer:Bool=false`: sets whether or not to only apply just the 
+                               averaging filter.
 """
-function shearingLayer(inputSize::Union{Int,NTuple{N, T}}; 
-                       scale = -1, shearLevel = scale, 
-                       dType = Float32, σ = abs, trainable = false,
-                       plan = true, boundary=Pad(-1,-1), averagingLayer = false) where {N,T}
+
+function shearingLayer(inputSize::Union{Int,NTuple{N, T}}; scale = -1,
+                       shearLevel = scale, bias=false, 
+                       init = Flux.glorot_normal, dType = Float32, σ = abs,
+                       trainable = false, plan = true, boundary=Pad(-1,-1),
+                       averagingLayer = false) where {N,T}
+
     scale = defaultShearletScale(inputSize, scale)
     if shearLevel < 0
         shearLevel = scale
@@ -73,9 +85,21 @@ end
                  convBoundary=Sym(), cw = Morlet(), averagingLayer = false,
                  varargs...) where {N,T}
 
-create a ConvFFT layer that uses wavelets from Wavelets.jl. By default it isn't trainable. varargs are any of the settings that can be passed on to creating a `CFW` type.
+Create a ConvFFT layer that uses wavelets from [ContinuousWavelets.jl](https://github.com/dsweber2/ContinuousWavelets.jl). By default it isn't trainable. varargs are any of the settings that can be passed on to creating a `CFW` type.
+# New Arguments
+- `convBoundary::ConvBoundary=Sym()`: the type of symmetry to use in computing
+                                      the transform. Note that convBoundary and
+                                      boundary are different, with boundary
+                                      needing to be set using types from
+                                      ContinuousWavelets and convBoundary needs
+                                      to be set using the FourierFilterFlux
+                                      boundary types.
+- `cw::ContWaveClass=Morlet()`: the type of wavelet to use, e.g. `dog2`, 
+                                `Morlet()`. See ContinuousWavelets.jl for more.
 
-Note that convBoundary and boundary are different, with boundary needing to be set using types from ContinuousWavelets and convBoundary needs to be set using the FourierFilterFlux boundary types.
+- `averagingLayer::Bool=false`: the same idea as for shearingLayer, if this is
+                                true, only return the results from the
+                                averaging filter.
 
 """
 function waveletLayer(inputSize::Union{Int,NTuple{N, T}}; 
