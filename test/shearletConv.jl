@@ -1,11 +1,13 @@
-scale =1; shearLevel = 1; inputSize = (25,25,1,2); useGpu = true; σm =identity; dType=Float32
-cpuShears = 3; singleRes = 3; shears = 3
 # standard input size
 @testset "shearing constructors tiny" begin
     inputSizes = [(25,25,1,2), (25, 25, 4, 5, 3)]
     scalesShears = [(1,1),(2,1), (2,2),(4,1), (4,2), (4,3), (4,4)]#, (8,1), (8,2), (8,3), (8,4), (8,6), (8,8)]
     shearLevels = [1,2,4,5]
-    useGpus = [true, false]
+    if CUDA.functional()
+        useGpus = [true, false]
+    else
+        useGpus = [false]
+    end
     dType = Float32
     σs =[identity, abs, relu]
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs
@@ -71,12 +73,15 @@ cpuShears = 3; singleRes = 3; shears = 3
     end
 end
 
-inputSize=(400, 400, 1, 2); (scale, shearLevel) =(1, 1);useGpu=true; σm=identity
 @testset "shearing constructors large" begin
     # realistic size example
     inputSizes = [(400,400,1,2)]
     scalesShears = [(1,1), (2,2), (4,4), (8,1), (8,4), (8,8)]
-    useGpus = [true,false]
+    if CUDA.functional()
+        useGpus = [true, false]
+    else
+        useGpus = [false]
+    end
     σs = [identity, abs, relu]
     dType = Float32
     for inputSize in inputSizes, (scale, shearLevel) in scalesShears, useGpu in useGpus, σm in σs

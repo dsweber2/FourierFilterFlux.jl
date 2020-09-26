@@ -1,9 +1,14 @@
+if CUDA.functional()
+    onGpu = gpu
+else
+    onGpu = identity
+end
 @testset "ConvFFT transform" begin
     @testset "ConvFFT 2D" begin
         originalSize = (10,10,1,2)
         tmp = zeros(originalSize);
         init = cu(zeros(originalSize)); init[5,5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize) |> gpu
+        shears = ConvFFT(originalSize) |> onGpu
         res = shears(init);
         @test size(res) == (10,10,5,1,2)
         # TODO: for the other boundary conditions. This is just periodic
@@ -18,7 +23,7 @@
         #@info "" minimum(res), minimum(minimalTransform(shears, init))
         @test minimalTransform(shears, init) ≈ res
 
-        shears = ConvFFT(originalSize, 5, abs) |> gpu
+        shears = ConvFFT(originalSize, 5, abs) |> onGpu
         res = shears(init);
         @test abs.(minimalTransform(shears, init)) ≈ res
     end
@@ -26,7 +31,7 @@
         originalSize = (10,1,2)
         tmp = zeros(originalSize); tmp
         init = cu(zeros(originalSize)); init[5,1,2] = Float32(1)
-        shears = ConvFFT(originalSize, nConvDims=1, boundary=Pad(-1)) |> gpu
+        shears = ConvFFT(originalSize, nConvDims=1, boundary=Pad(-1)) |> onGpu
         res = shears(init);
         @test size(res) == (10,5,1,2)
         # TODO: this is only padded
@@ -43,7 +48,7 @@
         @test minimalTransform(shears, init) ≈ res
 
         shears = ConvFFT(originalSize, 5, abs, nConvDims=1,
-                         boundary=Pad(-1)) |> gpu
+                         boundary=Pad(-1)) |> onGpu
         res = shears(init);
         @test abs.(minimalTransform(shears, init)) ≈ res
     end

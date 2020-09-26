@@ -86,11 +86,18 @@
 
 
         # convert to a gpu version
-        gpuVer = shears |> gpu
-        # TODO: this isn't implemented quite yet
-        @test typeof(gpuVer.weight) <: Flux.CuArray
-        @test typeof(gpuVer.fftPlan) <: CUDA.CUFFT.rCuFFTPlan
-
+        if CUDA.functional()
+            gpuVer = shears |> gpu
+            @test typeof(gpuVer.weight) <: CuArray
+            @test typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan
+            if !(typeof(gpuVer.weight) <: CuArray)
+                println("gpuVer.weight is of type $(typeof(gpuVer.weight))")
+            end
+            if !(typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan)
+                println("gpuVer.fftPlan is of type $(typeof(gpuVer.fftPlan))")
+            end
+            typeof(gpuVer.fftPlan)
+        end
         # extra channel dimension
         originalSize = (20,10,16, 1,10)
         shears = ConvFFT(randn(Float32, 16, 20, 3), nothing, originalSize, abs,
@@ -281,11 +288,11 @@ end
     @test size(sheared) == (21,1,1,10)
 
     # convert to a gpu version
-    gpuVer = shears |> gpu
-    # TODO: this isn't implemented quite yet
-    @test typeof(gpuVer.weight) <: Flux.CuArray
-    @test typeof(gpuVer.fftPlan) <: CUDA.CUFFT.rCuFFTPlan
-
+    if CUDA.functional()
+        gpuVer = shears |> gpu
+        @test typeof(gpuVer.weight) <: CuArray
+        @test typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan
+    end
     # extra channel dimension
     originalSize = (20,16, 1,10)
     shears = ConvFFT(randn(Float32, 16, 3), nothing, originalSize, abs,
