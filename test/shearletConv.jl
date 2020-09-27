@@ -1,3 +1,5 @@
+scale =2; shearLevel = 2; inputSize = (25,25,4,5,3); useGpu = false; σm =abs; dType=Float32
+cpuShears = 3; singleRes = 3; shears = 3
 # standard input size
 @testset "shearing constructors tiny" begin
     inputSizes = [(25,25,1,2), (25, 25, 4, 5, 3)]
@@ -31,14 +33,14 @@
             else
                 init = randn(dType, inputSize);
             end
-            
+
             fullResult = shears(init);
             @test size(fullResult) == (inputSize[1:2]...,size(shears.weight,3),
                                        inputSize[3:end]...)
             if σm!=relu
-                @test minimum(abs.(fullResult)) > 0
+                # are there only a very small number of zeros?
+                @test count(abs.(fullResult) .== 0) < .001 *prod(size(fullResult))
             end
-
             # compare with the result from Shearlab itself
             effectiveShears = ceil.(Int, (1:shearLevel)/2)
             cpuShears=3; res = 2
