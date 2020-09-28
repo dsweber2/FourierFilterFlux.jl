@@ -1,7 +1,7 @@
 ############################ 2D methods ###############################
 
 
-@docs """
+"""
 shearingLayer(inputSize::Union{Int,NTuple{N, T}}; 
                        scale = -1, shearLevel = scale, 
                        dType = Float32, σ = abs, trainable = false,
