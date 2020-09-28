@@ -1,7 +1,7 @@
 ############################ 2D methods ###############################
 
 
-"""
+@docs """
 shearingLayer(inputSize::Union{Int,NTuple{N, T}}; 
                        scale = -1, shearLevel = scale, 
                        dType = Float32, σ = abs, trainable = false,
@@ -21,7 +21,6 @@ create a ConvFFT layer that uses shearlets from [Shearlab.jl](https://arsenal997
 - `averagingLayer:Bool=false`: sets whether or not to only apply just the 
                                averaging filter.
 """
-
 function shearingLayer(inputSize::Union{Int,NTuple{N, T}}; scale = -1,
                        shearLevel = scale, bias=false, 
                        init = Flux.glorot_normal, dType = Float32, σ = abs,
