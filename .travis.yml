@@ -23,7 +23,7 @@ jobs:
         - julia --project=docs/ -e 'using Pkg; Pkg.build(verbose=true);
                                     Pkg.develop(PackageSpec(path=pwd()));
                                     Pkg.instantiate()'
-        - juila --project=docs/ docs/make.jl
+        - julia --project=docs/ docs/make.jl
       after_success: skip
   allow_failures:
     - julia: nightly
