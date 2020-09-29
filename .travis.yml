@@ -17,13 +17,13 @@ jobs:
   fast_finish: true
   include:
     - stage: "Documentation"
-      julia: 1.5
+      julia: 1.4
       os: linux
       script:
-        - julia --project=docs/ -e 'using Pkg;
+        - julia --project=docs/ -e 'using Pkg; Pkg.build(verbose=true);
                                     Pkg.develop(PackageSpec(path=pwd()));
                                     Pkg.instantiate()'
         - juila --project=docs/ docs/make.jl
       after_success: skip
   allow_failures:
-    - julia: nihtly
+    - julia: nightly
