@@ -825,9 +825,9 @@ uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 
 [[Shearlab]]
 deps = ["DSP", "FFTW", "Images", "PyCall", "PyPlot", "Wavelets"]
-git-tree-sha1 = "36b2446e8fe262073498f16ea27815ab1a539a8a"
+git-tree-sha1 = "5b0d58f05664885841700fb9d211d785740d45a4"
 repo-rev = "master"
-repo-url = "https://github.com/arsenal9971/Shearlab.jl.git"
+repo-url = "https://github.com/dsweber2/Shearlab.jl.git"
 uuid = "bd728e11-17d4-5679-9a00-f24958f87a1c"
 version = "0.3.1"
 
