@@ -1,4 +1,7 @@
-TODO: include notes about gpu usage
+```@setup 1DconvEx
+using Plots; gr()
+Plots.reset_defaults()
+```
 # ConvFFT type #
 The core type of this package. As a simple example in 1D:
 ```@example 1DconvEx
@@ -8,7 +11,7 @@ w[55:60,2] = randn(6)
 ŵ = rfft(w, 1)
 W = ConvFFT(ŵ,nothing,(128,1,2))
 plot(W, title="Time domain Filters", dispReal=true,
-     apply=identity, vis=1:2)
+     apply=identity, vis=1:2);
 savefig("randFilters.svg")#hide
 ```
 ![](randFilters.svg)
@@ -20,7 +23,7 @@ this to a signal `x`, which is non-zero at only the two boundary locations:
 x = zeros(128,1,2);
 x[1,1,2] = 1; x[end,1,2] = -1; # positive on one side and negative on the other
 r = W(x); size(r)
-plot(r[:,:,1,2],title="convolved with x") #hide
+plot(r[:,:,1,2],title="convolved with x"); #hide
 savefig("convolveWx.svg") #hide
 ```
 ![](convolveWx.svg)
@@ -35,7 +38,7 @@ address this, e.g. `Pad(6)`
 ``` @example 1DconvEx
 W = ConvFFT(ŵ,nothing,(128,1,2),boundary= Pad(6))
 r =W(x); size(r)
-plot(r[:,:,1,2],title="convolved with x") #hide
+plot(r[:,:,1,2],title="convolved with x"); #hide
 savefig("convolveWxPad.svg") #hide
 ```
 ![](convolveWxPad.svg)
@@ -51,7 +54,7 @@ filt = ConvFFT(ex2Dsize, 3, relu, trainable=true,bias=false)
 plot(heatmap(filt,dispReal=true,vis=1,colorbar=false,title="Filter 1"),
 	heatmap(filt,dispReal=true,vis=2,colorbar=false,title="Filter 2"),
 	heatmap(filt,dispReal=true,vis=3,colorbar=false, title="Filter 3"),
-	layout=(1,3))
+	layout=(1,3));
 savefig("2Dfilts.svg") #hide
 ```
 ![](2Dfilts.svg)
@@ -68,7 +71,7 @@ genEx(n) = [(cpu(randn(ex2Dsize)), true) for i=1:n];
 Flux.train!(loss, params(filt), genEx(100), ADAM())
 plot(heatmap(filt,vis=1), heatmap(filt,vis=2), heatmap(filt,vis=3),
 	heatmap(targetConv,vis=1), heatmap(targetConv,vis=2),
-	heatmap(targetConv,vis=3))
+	heatmap(targetConv,vis=3));
 savefig("fitting2Dfilts.svg") #hide
 ```
 ![](fitting2Dfilts.svg)
@@ -113,9 +116,9 @@ The arguments are
   using a rfft, this is only the postive frequencies in the first dimension
   (vertical in the 2D shearlet plots and horizontal in the 1D plot).
 ``` @example 1DconvEx
-plot(heatmap(W2,title="first shearlet"), heatmap(W2,vis=4,title="Fourth shearlet"))
+plot(heatmap(W2,title="first shearlet"), heatmap(W2,vis=4,title="Fourth shearlet"));
 savefig("demoVis.svg") #hide
-plot(W1,vis=:,title="All of the Morlet Wavelets")
+plot(W1,vis=:,title="All of the Morlet Wavelets");
 savefig("demoVis1D.svg") #hide
 ```
   ![](demoVis.svg)
