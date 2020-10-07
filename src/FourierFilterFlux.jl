@@ -97,7 +97,8 @@ struct ConvFFT{D, OT, F, A, V, PD, P, T, An}
     fftPlan::P
     analytic::An
 end
-
+import Base:ndims
+ndims(c::ConvFFT{D})=D
 function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ =
                  identity; plan=true, boundary = Periodic(),
                  dType=Float32, trainable=true, OT=Float32, 
