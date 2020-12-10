@@ -101,11 +101,11 @@ Create a ConvFFT layer that uses wavelets from [ContinuousWavelets.jl](https://g
                                 averaging filter.
 
 """
-function waveletLayer(inputSize::Union{Int,NTuple{N,T}};
+function waveletLayer(inputSize::Union{T,NTuple{N,T}};
                       dType=Float32, σ=identity, trainable=false,
                       plan=true, init=Flux.glorot_normal, bias=false,
                       convBoundary=Sym(), cw=Morlet(), averagingLayer=false,
-                      varargs...) where {N,T}
+                      varargs...) where {N,T <: Int}
     waveletType = wavelet(cw; varargs...)
     wavelets, ω = computeWavelets(inputSize[1], waveletType; T=T)
 

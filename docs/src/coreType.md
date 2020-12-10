@@ -88,7 +88,6 @@ x = x |> gpu;
 Wgpu(x)[:,1,1,1]'
 ```
 
-
 ```@docs
 
 ConvFFT

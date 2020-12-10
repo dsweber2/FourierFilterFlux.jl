@@ -41,7 +41,7 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
 end
 @testset "Wavelets.jl construction and application" begin
     CWs = [Morlet(), Morlet(4π), dog1, paul16]
-    inputSizes = ((305,2),(256,1,4))
+    inputSizes = ((305,2),(256,1,4),129)
     scales = [1,8,12]
     averagingLengths =(0, 2, 4)
     normalizations=[1.0, Inf]
