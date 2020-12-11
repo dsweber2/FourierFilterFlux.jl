@@ -68,7 +68,7 @@
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
 
         ax = axes(x̂)[3:end-1]
-        ∇ = gradient((x̂) -> FourierFilterFlux.argWrapper(x̂, shears.weight[:,:,1], usedInds,
+        ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[:,:,1], usedInds,
                                                           shears.fftPlan, 
                                                           shears.bias, FourierFilterFlux.NonAnalyticMatching())[1,1,1,1,1], x̂) 
         @test minimum(abs.(diag(∇[1][:, :, 1,1])).≈ 2f0/31/21)
@@ -238,6 +238,12 @@ end
     ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
                                         nothing, An)[1,1,1,1,1],
                  x̂)
+    y,∂ = pullback((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
+                                        nothing, An)[1,1,1,1,1],
+                   x̂)
+    ∂(y)
+    ∂(y) # repeated calls to the derivative were causing errors while argWrapper
+    # was in use
     @test minimum(abs.(∇[1][:, 1,1]).≈ 2f0/31)
     # no bias, not analytic and real valued output
     

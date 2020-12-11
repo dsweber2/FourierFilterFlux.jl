@@ -1,5 +1,5 @@
 using FourierFilterFlux, ContinuousWavelets
-using Flux, FFTW, CUDA, Shearlab, Wavelets
+using Flux, FFTW, CUDA, Shearlab, Wavelets, Zygote
 using Logging, Test, LinearAlgebra
 
 @testset "FourierFilterFlux.jl" begin

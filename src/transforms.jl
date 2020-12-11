@@ -48,9 +48,9 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number,N}, usedInds,
                          fftPlan, bias, isAnalytic) where N
     axShear = axes(shears)
     axx = axes(x̂)[N:end - 1]
-    łλ(ii, bias) = argWrapper(x̂, shears[axShear[1:end - 1]..., ii], usedInds,
+    łλ(ii, bias) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii], usedInds,
                        fftPlan, bias[ii], isAnalytic[ii])
-    łλ(ii, bias::Nothing) = argWrapper(x̂, shears[axShear[1:end - 1]..., ii],
+    łλ(ii, bias::Nothing) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii],
                                      usedInds, fftPlan, bias, isAnalytic[ii])
     mapped = map(ii -> łλ(ii, bias), 1:size(shears)[end])
     return permutedims(cat(mapped..., dims=1), ((2:N)..., 1, (N + 1):ndims(mapped[1])...))
@@ -108,20 +108,4 @@ end
 function applyWeight(x̂, shear, usedInds, fftPlan, bias, An)
     return applyWeight(x̂, shear, usedInds, fftPlan, nothing, An) .+
         bias
-end
-
-
-"""
-this is purely because the pullback of applyWeight doesn't pass usedInds or the
-bias backwards, even though it does x̂ and shear correctly
-"""
-argWrapper(x̂, shear, usedInds, fftPlan, bias, An) = applyWeight(x̂, shear, usedInds, fftPlan, bias, An)
-Zygote.@adjoint function argWrapper(x̂, shear, usedInds, fftPlan, bias, An)
-    # get what Zygote thinks it should be
-    y, _back = Zygote.pullback(applyWeight, x̂, shear, usedInds, fftPlan, bias, An)
-    function back(Δ)
-        ∂ = _back(Δ)
-        return ∂[1], ∂[2], usedInds, ∂[4], bias, An
-    end
-    return y, back
 end
