@@ -2,7 +2,7 @@ cw = Morlet(); β = 1.0; averagingLength = 0; normalization = Inf; scale = 1;
 inputSize = (305,2)
 function f(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32,inputSize)
-    W= 3; waves = 4
+    W= 3; waves = 4; wWave = 4
     # for the purpose of testing, we don't need the wall of warnings
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
         #global W, waves
@@ -25,7 +25,8 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
         # global wWave
         wWave = cwt(x, waves);
     end
-    testRes = @test size(wFFF)===size(wWave)
+    testRes = @test size(wFFF)[1:2]==size(wWave)[1:2] # not sure why it was
+    # triple equal...
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale 
     end

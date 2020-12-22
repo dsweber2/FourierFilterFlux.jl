@@ -13,6 +13,9 @@ function (shears::ConvFFT{D,OT,A,B,C,PD,P})(x) where {D,OT,A,B,C,PD,P <: Tuple}
     xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight) - 1)
 
     Forward = shears.fftPlan[1]
+    if size(xbc) != size(Forward)
+        xbc = reshape(xbc, size(Forward))
+    end
     x̂ = Forward * xbc
 
     nextLayer = hook(x -> dem(x, "should be after internalConvFFT"), internalConvFFT(x̂,
@@ -29,7 +32,22 @@ function (shears::ConvFFT)(x)
     xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight) - 1)
 
     F = shears.fftPlan
-    x̂ = F * xbc
+    if F isa Nothing
+        F = makePlan(eltype(x), outType(shears), shears.w, size(x), shears.bc)
+        Forward = F[1]
+    end
+
+    if F isa Tuple
+        Forward = F[1]
+    else
+        Forward = F
+    end
+    
+    
+    if size(xbc) != size(Forward)
+        xbc = reshape(xbc, size(Forward))
+    end
+    x̂ = Forward * xbc
 
     nextLayer = internalConvFFT(x̂, shears.weight, usedInds, F,
                                 shears.bias, shears.analytic)

@@ -113,38 +113,48 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ=identity; plan=true,
         exSz = originalSize
     end
     netSize, boundary = effectiveSize(exSz[1:N - 1], boundary)
-    nullEx = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...))
     convDims = (1:(N - 1)...,)
 
     # Check that they applied the boundary condition, and if not do it ourselves
-    if dType <: Complex && size(nullEx, 1) != size(w, 1)
+    if dType <: Complex && netSize[1] != size(w, 1)
         wtmp = ifftshift(ifft(w, convDims), convDims)
         wtmp = applyBC(wtmp, boundary, N - 1)
         w = fft(fftshift(wtmp, convDims), convDims)
         @warn("You didn't hand me a set of filters constructed with the boundary in mind. I'm going to adjust them to fit, this may not be what you intended")
-    elseif dType <: Real && size(nullEx, 1) >> 1 + 1 != size(w, 1)
+    elseif dType <: Real && netSize[1] >> 1 + 1 != size(w, 1)
         wtmp = ifftshift(irfft(w, exSz[1], convDims), convDims)
         wtmp, _ = applyBC(wtmp, boundary, N - 1)
         w = rfft(fftshift(wtmp, (convDims)), convDims)
         @warn("You didn't hand me a set of filters constructed with the boundary in mind. I'm going to adjust them to fit, this may not be what you intended")
     end
 
-    if plan && dType <: Real && OT <: Real
-        fftPlan = plan_rfft(real.(nullEx), convDims)
-    elseif plan && dType <: Real # output is complex, wavelets analytic
-        null2 = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...)) .+
-            0im
-        fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
-    elseif plan
-        fftPlan = plan_fft!(nullEx, convDims)
+    if plan
+        fftPlan = makePlan(dType, OT, w, exSz, boundary)
     else
         fftPlan = nothing
     end
+    
     if typeof(An) <: Nothing
         An = map(x -> NonAnalyticMatching(), (1:size(w)[end]...,))
     end
 
     return ConvFFT{N - 1,OT,typeof(σ),typeof(w),typeof(b),typeof(boundary),typeof(fftPlan),trainable,typeof(An)}(σ, w, b, boundary, fftPlan, An)
+end
+
+function makePlan(dType, OT, w, exSz, boundary)
+    N = ndims(w)
+    netSize, boundary = effectiveSize(exSz[1:N - 1], boundary)
+    convDims = (1:(N-1)...,)
+    nullEx = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...))
+    if dType <: Real && OT <: Real
+        fftPlan = plan_rfft(real.(nullEx), convDims)
+    elseif dType <: Real # output is complex, wavelets analytic
+        null2 = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...)) .+
+            0im
+        fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
+    else
+        fftPlan = plan_fft!(nullEx, convDims)
+    end
 end
 
 
