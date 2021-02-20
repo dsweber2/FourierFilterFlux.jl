@@ -2,16 +2,13 @@ import NNlib.relu
 relu(x::C) where C <: Complex = real(x) > 0 ? x : C(0)
 
 # ways to convert between gpu and cpu
-import Flux.functor
-function functor(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
-    return (cft.weight, cft.bias,
-            cft.fftPlan), y -> ConvFFT{D,OT,F,typeof(y[1]),typeof(y[2]),PD,typeof(y[3]),T,An}(cft.σ, y[1],y[2],
-                                                              cft.bc, y[3],
-                                                              cft.analytic)
+function cu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
+    cuw = cu(cft.weight)
+    cub = cu(cft.bias)
+    cuf = cu(cft.fftPlan)
+    return ConvFFT{D,OT,F,typeof(cuw),typeof(cub),PD,typeof(cuf),T,An}(cft.σ, cuw, cub, cft.bc, cuf, cft.analytic)
 end
-# import Flux.gpu
 
-# import CUDA.cu
 # TODO this is somewhat kludgy, not sure why cu was converting these back
 function CUDA.cu(P::FFTW.rFFTWPlan)
     return plan_rfft(cu(zeros(real(eltype(P)), P.sz)), P.region)

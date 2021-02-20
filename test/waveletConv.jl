@@ -1,5 +1,14 @@
-cw = Morlet(); β = 1.0; averagingLength = 0; normalization = Inf; scale = 1;
+cw = dog1; β = 3.5; averagingLength = 2; normalization = Inf; scale = 12;
 inputSize = (305,2)
+inputSize = 129
+
+CWs = [Morlet(), Morlet(4π), dog1, paul16]; cw = CWs[1]
+inputSizes = ((305,2),(256,1,4),129); inputSize = inputSizes[1]
+scales = [1,8,12]; scale = scales[2]
+averagingLengths =(0, 2, 4); averagingLength = averagingLengths[2]
+normalizations=[1.0, Inf]; normalization = normalizations[2]
+βs = [1.0,3.5]; β = βs[1]
+σs =[identity, abs, relu]; σ = σs[2]
 function f(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32,inputSize)
     W= 3; waves = 4; wWave = 4
@@ -22,13 +31,12 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
 
     wWave = 5;
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
-        # global wWave
         wWave = cwt(x, waves);
     end
     testRes = @test size(wFFF)[1:2]==size(wWave)[1:2] # not sure why it was
     # triple equal...
     if !(typeof(testRes) <: Test.Pass)
-        @info "values are" inputSize cw β averagingLength normalization scale 
+        @info "values are" inputSize cw β averagingLength normalization scale
     end
     if averagingLength == 0
         reord = 1:size(wWave,2)
@@ -37,7 +45,7 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
     end
     testRes = @test norm((cpu(wFFF)-wWave[:, reord, axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
     if !(typeof(testRes) <: Test.Pass)
-        @info "values are" inputSize cw β averagingLength normalization scale 
+        @info "values are" inputSize cw β averagingLength normalization scale
     end
 end
 @testset "Wavelets.jl construction and application" begin
@@ -48,7 +56,7 @@ end
     normalizations=[1.0, Inf]
     βs = [1.0,3.5]
     σs =[identity, abs, relu]
-    
+
     for inputSize in inputSizes, cw in CWs, β in βs, normalization in
         normalizations, scale in scales, averagingLength in averagingLengths
         @testset "inputSize=$inputSize, cw =$(cw), β=$β" begin

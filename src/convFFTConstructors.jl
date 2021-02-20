@@ -99,7 +99,11 @@ Create a ConvFFT layer that uses wavelets from [ContinuousWavelets.jl](https://g
 - `averagingLayer::Bool=false`: the same idea as for shearingLayer, if this is
                                 true, only return the results from the
                                 averaging filter.
-
+arguments from wavelet constructor
+Q=8, boundary::T=SymBoundary(),
+        averagingType::A = Father(),
+        averagingLength::Int = 4, frameBound=1, p::N=Inf,
+        β=4
 """
 function waveletLayer(inputSize::Union{T,NTuple{N,T}};
                       dType=Float32, σ=identity, trainable=false,
