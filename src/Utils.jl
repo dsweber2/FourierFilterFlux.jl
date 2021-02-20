@@ -2,6 +2,7 @@ import NNlib.relu
 relu(x::C) where C <: Complex = real(x) > 0 ? x : C(0)
 
 # ways to convert between gpu and cpu
+import CUDA.cu
 function cu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
     cuw = cu(cft.weight)
     cub = cu(cft.bias)
