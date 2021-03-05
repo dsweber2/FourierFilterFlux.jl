@@ -5,11 +5,19 @@ if CUDA.functional()
         cw = cu(w)
         @test cw.weight isa CuArray # does cu work on the weights?
         @test cw.fftPlan isa CUFFT.rCuFFTPlan # does cu work on the fftPlan?
-        cu(randn(4))
-        typeof(cu(w.fftPlan))
-        cu(w)
         x = randn(100)
-        @test cw(cu(x)) isa CuArray
-        @test cw(cu(x)) ≈ cu(w(x)) # CUDA and cpu version get the same result approximately
+        cx = cu(x)
+        @test cw(cx) isa CuArray
+        @test cw(cx) ≈ cu(w(x)) # CUDA and cpu version get the same result approximately
+        ∇cu = gradient(t -> cw(t)[1], cx)[1]
+        ∇ = gradient(t -> w(t)[1], x)[1]
+        @test ∇ ≈ cpu(∇cu)
+        w1 = waveletLayer((100, 1, 1))
+        w1(x)
+        cw1 = cu(w1)
+        @test cw1(cx) ≈ cu(w1(x))
+        ∇cu = gradient(t -> abs(cw1(t)[1]), cx)[1]
+        ∇ = gradient(t -> abs(w1(t)[1]), x)[1]
+        @test ∇ ≈ cpu(∇cu)
     end
 end

@@ -6,7 +6,11 @@ import CUDA.cu
 function cu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
     cuw = cu(cft.weight)
     cub = cu(cft.bias)
-    cuf = cu(cft.fftPlan)
+    if cft.fftPlan isa Tuple
+        cuf = cu.(cft.fftPlan)
+    else
+        cuf = cu(cft.fftPlan)
+    end
     return ConvFFT{D,OT,F,typeof(cuw),typeof(cub),PD,typeof(cuf),T,An}(cft.σ, cuw, cub, cft.bc, cuf, cft.analytic)
 end
 
