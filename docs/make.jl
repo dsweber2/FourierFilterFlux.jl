@@ -1,7 +1,7 @@
 using Documenter, FourierFilterFlux
-
+ENV["GKSwstype"] = "100"
 makedocs(sitename="FourierFilterFlux.jl",
-         pages = [
+         pages=[
              "Install" => "installation.md",
              "ConvFFT" => [
                  "Core Type" => "coreType.md",
@@ -12,5 +12,5 @@ makedocs(sitename="FourierFilterFlux.jl",
          ])
 
 deploydocs(
-    repo = "github.com/dsweber2/FourierFilterFlux.jl.git",
+    repo="github.com/dsweber2/FourierFilterFlux.jl.git",
 )
