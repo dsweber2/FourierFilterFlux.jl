@@ -62,9 +62,25 @@ formatJLD(p) = p
     weights = originalDomain()
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
 """
-function originalDomain(cv; σ=identity)
+function originalDomain(cv::ConvFFT; σ=identity)
+    listOfWeights = eachslice(cpu(cv.weight), dims=2)
+    λorig(x, an) = originalDomain(x, cv.fftPlan, an)
+    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims=2))
+end
+function originalDomain(cv::ConvFFT{2}; σ=identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan, 1), (1, 2)))
 end
+
+originalDomain(wav, fftPlan, An::NonAnalyticMatching) = irfft(wav, 2 * (size(wav, 1) - 1))
+function originalDomain(wav, fftPlan, An::AnalyticWavelet)
+    isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
+    ifft([wav; zeros(eltype(wav), size(wav, 1) - 1 - isSourceOdd)], 1)
+end
+function originalDomain(wav, fftPlan, An::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
+    isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
+    ifft([wav; reverse(conj.(wav[2:end - isSourceOdd]))], 1)
+end
+
 
 function getBatchSize(c::C) where {C <: ConvFFT}
     if typeof(c.fftPlan) <: Tuple
