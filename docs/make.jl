@@ -1,5 +1,7 @@
 using Documenter, FourierFilterFlux
-ENV["GKSwstype"] = "100"
+ENV["GKSwstype"] = "nul"
+using Pkg
+Pkg.build("GR")
 makedocs(sitename="FourierFilterFlux.jl",
          pages=[
              "Install" => "installation.md",

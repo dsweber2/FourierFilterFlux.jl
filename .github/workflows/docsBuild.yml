@@ -15,10 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@latest
         with:
           version: '1.6'
-      - run: |
+      - name: Install dependencies
+        run: |
           sudo apt install libxt6 libxrender1 libxext6 libgl1-mesa-glx libqt5widgets5
       - run: |
           julia --project=docs -e '
@@ -28,7 +29,8 @@ jobs:
             Pkg.add(url="https://github.com/dsweber2/Shearlab.jl")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
-      - run: julia --project=docs docs/make.jl
+      - name: Build and deploy
+        run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
