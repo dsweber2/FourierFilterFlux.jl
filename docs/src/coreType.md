@@ -11,8 +11,8 @@ w[55:60,2] = randn(6)
 ŵ = rfft(w, 1)
 W = ConvFFT(ŵ,nothing,(128,1,2))
 plot(W, title="Time domain Filters", dispReal=true,
-     apply=identity, vis=1:2);
-savefig("randFilters.svg")#hide
+     apply=identity, vis=1:2); 
+savefig("randFilters.svg"); nothing #hide
 ```
 ![](randFilters.svg)
 
@@ -24,7 +24,7 @@ x = zeros(128,1,2);
 x[1,1,2] = 1; x[end,1,2] = -1; # positive on one side and negative on the other
 r = W(x); size(r)
 plot(r[:,:,1,2],title="convolved with x"); #hide
-savefig("convolveWx.svg") #hide
+savefig("convolveWx.svg"); nothing #hide
 ```
 ![](convolveWx.svg)
 
@@ -39,7 +39,7 @@ address this, e.g. `Pad(6)`
 W = ConvFFT(ŵ,nothing,(128,1,2),boundary= Pad(6))
 r =W(x); size(r)
 plot(r[:,:,1,2],title="convolved with x"); #hide
-savefig("convolveWxPad.svg") #hide
+savefig("convolveWxPad.svg"); nothing #hide
 ```
 ![](convolveWxPad.svg)
 
@@ -55,7 +55,7 @@ plot(heatmap(filt,dispReal=true,vis=1,colorbar=false,title="Filter 1"),
 	heatmap(filt,dispReal=true,vis=2,colorbar=false,title="Filter 2"),
 	heatmap(filt,dispReal=true,vis=3,colorbar=false, title="Filter 3"),
 	layout=(1,3));
-savefig("2Dfilts.svg") #hide
+savefig("2Dfilts.svg"); nothing #hide
 ```
 ![](2Dfilts.svg)
 
@@ -72,7 +72,7 @@ Flux.train!(loss, params(filt), genEx(100), ADAM())
 plot(heatmap(filt,vis=1), heatmap(filt,vis=2), heatmap(filt,vis=3),
 	heatmap(targetConv,vis=1), heatmap(targetConv,vis=2),
 	heatmap(targetConv,vis=3));
-savefig("fitting2Dfilts.svg") #hide
+savefig("fitting2Dfilts.svg"); nothing #hide
 ```
 ![](fitting2Dfilts.svg)
 
@@ -134,7 +134,7 @@ savefig("demoVis1D.svg") #hide
 plot(heatmap(W2, dispReal=true,title= "first wavelet space domain"),
      heatmap(W2, dispReal=true, restrict= (255:345,260:350), apply=identity,
 	         title= "first wavelet space domain \nzoomed without abs"));
-savefig("zooming.svg") #hide
+savefig("zooming.svg"); nothing #hide
 ```
   ![](zooming.svg)
 
