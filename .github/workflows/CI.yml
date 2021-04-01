@@ -5,6 +5,7 @@ on:
     paths: # run CI/CD when the tests change, the dependencies change, or the version changes
     - test/runtests.jl
     - Project.toml
+    tags: '*'
   pull_request: # run when pull requests are made
     paths:
     - src/* 
@@ -13,14 +14,14 @@ on:
     - Project.toml
 jobs:
   test:
-    name: Julia $ - $ - $ - $
-    runs-on: $
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1.0'
-          - '1.6'
+          - '1'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -31,18 +32,18 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: $
-          arch: $
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
         with:
           path: ~/.julia/artifacts
-          key: $-test-$-$
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
           restore-keys: |
-            $-test-$-
-            $-test-
-            $-
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
