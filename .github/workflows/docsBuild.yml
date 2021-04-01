@@ -1,5 +1,6 @@
 name: Docs
 on:
+  workflow_dispatch:
   push:
     paths: # rebuild the docs when the version changes or the docs change
     - docs/*

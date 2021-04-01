@@ -1,6 +1,7 @@
 # Generated using the wonderful PkgTemplates.jl and altered slightly 
 name: CI
 on:
+  workflow_dispatch: #get a button to trigger it by hand
   push:
     paths: # run CI/CD when the tests change, the dependencies change, or the version changes
     - test/runtests.jl
