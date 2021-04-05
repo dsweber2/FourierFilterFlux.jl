@@ -16,6 +16,7 @@ if CUDA.functional()
         w1(x)
         cw1 = cu(w1)
         @test cw1(cx) ≈ cu(w1(x))
+
         ∇cu = gradient(t -> abs(cw1(t)[1]), cx)[1]
         ∇ = gradient(t -> abs(w1(t)[1]), x)[1]
         @test ∇ ≈ cpu(∇cu)

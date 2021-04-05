@@ -4,11 +4,11 @@ inputSize = 129
 
 CWs = [Morlet(), Morlet(4π), dog1, paul16]; cw = CWs[1]
 inputSizes = ((305,2),(256,1,4),129); inputSize = inputSizes[1]
-scales = [1,8,12]; scale = scales[2]
-averagingLengths =(0, 2, 4); averagingLength = averagingLengths[2]
-normalizations=[1.0, Inf]; normalization = normalizations[2]
+scales = [1,8,12]; scale = scales[1]
+averagingLengths =(-2, 0, 2); averagingLength = averagingLengths[1]
+normalizations=[1.0, Inf]; normalization = normalizations[1]
 βs = [1.0,3.5]; β = βs[1]
-σs =[identity, abs, relu]; σ = σs[2]
+σs =[identity, abs, relu]; σ = σs[1]
 function f(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32,inputSize)
     W= 3; waves = 4; wWave = 4
@@ -38,12 +38,8 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale
     end
-    if averagingLength == 0
-        reord = 1:size(wWave,2)
-    else
-        reord = [2:size(wWave,2)..., 1]
-    end
-    testRes = @test norm((cpu(wFFF)-wWave[:, reord, axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=1f-7 # just fft ifft is on this order
+    reord = [2:size(wWave,2)..., 1]
+    testRes = @test norm((cpu(wFFF)-wWave[:, reord, axes(wFFF)[3:end]...]))./norm(x) ≈ 0 atol=2f-7 # just fft ifft is on this order
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale
     end

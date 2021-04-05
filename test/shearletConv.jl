@@ -20,7 +20,7 @@ cpuShears = 3; singleRes = 3; shears = 3
                 shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
                                        dType = dType, σ=σm)
             end
-            @test size(shears.fftPlan) == 
+            @test size(shears.fftPlan) ==
                 inputSize .+ (2 .* shears.bc.padBy...,
                               fill(0, length(inputSize)-2)...)
             @test shears.σ == σm
@@ -48,7 +48,7 @@ cpuShears = 3; singleRes = 3; shears = 3
                 #global cpuShears, res
                 cpuShears = Shearlab.getshearletsystem2D(inputSize[1:2]...,
                                                          scale,
-                                                         effectiveShears, 
+                                                         effectiveShears,
                                                          typeBecomes=Float32,
                                                          padded=true)
                 res = Shearlab.sheardec2D(init, cpuShears)
@@ -57,7 +57,7 @@ cpuShears = 3; singleRes = 3; shears = 3
             # just the averaging filter
             with_logger(ConsoleLogger(stderr,Logging.Error)) do
                 #global shears
-                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel, 
+                shears = shearingLayer(inputSize, scale=scale, shearLevel=shearLevel,
                                        dType = dType, σ=σm, averagingLayer=true)
             end
             @test size(shears.weight, 3) ==1

@@ -42,8 +42,6 @@ function (shears::ConvFFT)(x)
     else
         Forward = F
     end
-    
-    
     if size(xbc) != size(Forward)
         xbc = reshape(xbc, size(Forward))
     end
@@ -66,18 +64,16 @@ function internalConvFFT(x̂, shears::AbstractArray{<:Number,N}, usedInds,
                          fftPlan, bias, isAnalytic) where N
     axShear = axes(shears)
     axx = axes(x̂)[N:end - 1]
-    łλ(ii, bias) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii], usedInds,
-                       fftPlan, bias[ii], isAnalytic[ii])
-    łλ(ii, bias::Nothing) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii],
-                                     usedInds, fftPlan, bias, isAnalytic[ii])
-    mapped = map(ii -> łλ(ii, bias), 1:size(shears)[end])
+    @views łλ(ii, bias) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii], usedInds, fftPlan, bias[ii], isAnalytic[ii])
+    @views łλ(ii, bias::Nothing) = applyWeight(x̂, shears[axShear[1:end - 1]..., ii], usedInds, fftPlan, bias, isAnalytic[ii])
+    @views mapped = map(ii -> łλ(ii, bias), 1:size(shears)[end])
     return permutedims(cat(mapped..., dims=1), ((2:N)..., 1, (N + 1):ndims(mapped[1])...))
 end
 
 # no bias, not analytic and both match (either both real or both complex)
 function applyWeight(x̂, shear, usedInds, fftPlan, bias::Nothing, An::NonAnalyticMatching)
     tmp = fftPlan \ (shear .* x̂) # filter
-    tmp = tmp[usedInds..., axes(tmp)[length(usedInds) + 1:end]...] # get rid of the padding
+    @views tmp = tmp[usedInds..., axes(tmp)[length(usedInds) + 1:end]...] # get rid of the padding
     tmp = reshape(tmp, (1, size(tmp)...)) # add a dummy dimension to join over
     return tmp
 end
@@ -88,11 +84,11 @@ function applyWeight(x̂, shear, usedInds, fftPlan, bias::Nothing, An::AnalyticW
     outer = axes(x̂)[ndims(shear) + 1:end]
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
     accessedAxes = axes(shear)
-    tmp = eltype(x̂).(shear .* x̂[accessedAxes..., outer...]) # filter
+    @views tmp = shear .* x̂[accessedAxes..., outer...] # filter
     wave = cat(tmp, adapt(tmp, zeros(eltype(tmp), size(shear, 1) - 1 - isSourceOdd,
                                      size(tmp)[2:end]...)), dims=1) # symmetrize
     tmp = fftPlan \ wave       # back to time domain
-    tmp = tmp[usedInds..., axes(tmp)[length(usedInds) + 1:end]...] # get rid of the padding
+    @views tmp = tmp[usedInds..., axes(tmp)[length(usedInds) + 1:end]...] # get rid of the padding
     tmp = reshape(tmp, (1, size(tmp)...)) # add a dummy dimension to join over
     return tmp
 end
