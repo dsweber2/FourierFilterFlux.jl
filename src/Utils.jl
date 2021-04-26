@@ -2,6 +2,21 @@ import NNlib.relu
 relu(x::C) where C <: Complex = real(x) > 0 ? x : C(0)
 
 # ways to convert between gpu and cpu
+import Adapt.adapt
+function adapt(to, cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
+    cuw = adapt(to, cft.weight)
+    cub = adapt(to, cft.bias)
+    println("here")
+    if cft.fftPlan isa Tuple
+        cuf = map(thisPlan -> adapt(to, thisPlan), cft.fftPlan)
+    else
+        cuf = adapt(to, cft.fftPlan)
+    end
+    println(typeof(cuf))
+    println(to)
+    return ConvFFT{D,OT,F,typeof(cuw),typeof(cub),PD,typeof(cuf),T,An}(cft.σ, cuw, cub, cft.bc, cuf, cft.analytic)
+end
+
 import CUDA.cu
 function cu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
     cuw = cu(cft.weight)
@@ -25,6 +40,16 @@ function CUDA.cu(P::FFTW.cFFTWPlan)
     return plan_fft(cu(zeros(eltype(P), P.sz)), P.region)
 end
 CUDA.cu(P::CUFFT.cCuFFTPlan) = P
+
+# come back from the gpu to the cpu
+import Flux.cpu
+function cpu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
+    w = cpu(cft.weight)
+    b = cpu(cft.bias)
+    f = cpu(cft.fftPlan)
+    return ConvFFT{D,OT,F,typeof(w),typeof(b),PD,typeof(f),T,An}(cft.σ, w, b, cft.bc, f, cft.analytic)
+end
+
 
 
 function Flux.trainable(CFT::ConvFFT{A,B,C,D,E,F,G,true}) where {A,B,C,D,E,F,G}
