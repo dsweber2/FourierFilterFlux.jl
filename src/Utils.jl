@@ -6,16 +6,14 @@ import Adapt.adapt
 function adapt(to, cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
     cuw = adapt(to, cft.weight)
     cub = adapt(to, cft.bias)
-    println("here")
     if cft.fftPlan isa Tuple
         cuf = map(thisPlan -> adapt(to, thisPlan), cft.fftPlan)
     else
         cuf = adapt(to, cft.fftPlan)
     end
-    println(typeof(cuf))
-    println(to)
     return ConvFFT{D,OT,F,typeof(cuw),typeof(cub),PD,typeof(cuf),T,An}(cft.σ, cuw, cub, cft.bc, cuf, cft.analytic)
 end
+export adapt
 
 import CUDA.cu
 function cu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
@@ -35,11 +33,18 @@ function CUDA.cu(P::FFTW.rFFTWPlan)
 end
 CUDA.cu(P::CUFFT.rCuFFTPlan) = P
 
-
 function CUDA.cu(P::FFTW.cFFTWPlan)
     return plan_fft(cu(zeros(eltype(P), P.sz)), P.region)
 end
 CUDA.cu(P::CUFFT.cCuFFTPlan) = P
+
+Adapt.adapt(::Type{Array{T}}, P::FFTW.FFTWPlan{T}) where T = P
+function Adapt.adapt(::Type{Array{T}}, P::FFTW.rFFTWPlan) where T
+    plan_rfft(zeros(real(T), P.sz), P.region)
+end
+Adapt.adapt(::Type{<:Array{T}}, P::AbstractFFTs.Plan) where T = P
+Adapt.adapt(::CUDA.Float32Adaptor, P::AbstractFFTs.Plan) where T = cu(P)
+
 
 # come back from the gpu to the cpu
 import Flux.cpu
