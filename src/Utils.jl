@@ -42,8 +42,8 @@ Adapt.adapt(::Type{Array{T}}, P::FFTW.FFTWPlan{T}) where T = P
 function Adapt.adapt(::Type{Array{T}}, P::FFTW.rFFTWPlan) where T
     plan_rfft(zeros(real(T), P.sz), P.region)
 end
-Adapt.adapt(::Type{<:Array{T}}, P::AbstractFFTs.Plan) where T = P
-Adapt.adapt(::CUDA.Float32Adaptor, P::AbstractFFTs.Plan) where T = cu(P)
+Adapt.adapt(::Type{<:Array}, P::AbstractFFTs.Plan) = P
+Adapt.adapt(::Type{<:CuArray}, P::AbstractFFTs.Plan) = cu(P)
 
 
 # come back from the gpu to the cpu
@@ -140,6 +140,9 @@ function adapt(Atype, x::T) where T <: CUDA.CUFFT.CuFFTPlan
     end
     return newX
 end
+# reredundant
+adapt(::Type{<:CuArray}, x::T) where T <: CUDA.CUFFT.CuFFTPlan = x
+
 function fromRestrictLocs(restrict, z, i)
     if typeof(restrict[i]) <: Colon
         return 1:size(z, i)
