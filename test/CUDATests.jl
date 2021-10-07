@@ -9,9 +9,8 @@ if CUDA.functional()
         @test cw1.weight isa CuArray # does gpu work on the weights?
         @test cw1.fftPlan isa CUFFT.rCuFFTPlan # does gpu work on the fftPlan?
         w1 = cpu(cw)
-        @test cw1.weight isa Array # does cpu work on the weights?
+        @test w1.weight isa Array # does cpu work on the weights?
         @test w1.fftPlan isa FFTW.rFFTWPlan # does cpu work on the fftPlan?
-
         x = randn(100)
         cx = cu(x)
         @test cw(cx) isa CuArray

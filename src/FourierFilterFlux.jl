@@ -8,9 +8,11 @@ using ContinuousWavelets
 using Flux
 using Adapt
 using RecipesBase
-using Base: tail
+using Base:tail
 
-import Adapt: adapt
+const use_cuda = Ref(false)
+
+import Adapt:adapt
 export pad, poolSize, originalDomain, params!, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types and constructors
@@ -216,4 +218,14 @@ nFrames(p::ConvFFT) = size(p.weight)[end]
 include("transforms.jl")
 include("Utils.jl")
 include("convFFTConstructors.jl")
+
+function __init__()
+  use_cuda[] = CUDA.functional() # Can be overridden after load with `Flux.use_cuda[] = false`
+  if CUDA.functional()
+    if !CUDA.has_cudnn()
+      @warn "CUDA.jl found cuda, but did not find libcudnn. Some functionality will not be available."
+end
+  end
+end
+
 end # module

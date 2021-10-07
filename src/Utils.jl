@@ -54,7 +54,8 @@ function cpu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
     f = cpu(cft.fftPlan)
     return ConvFFT{D,OT,F,typeof(w),typeof(b),PD,typeof(f),T,An}(cft.σ, w, b, cft.bc, f, cft.analytic)
 end
-
+import Flux.gpu
+gpu(x) = use_cuda[] ? fmap(cu, x) : x
 
 
 function Flux.trainable(CFT::ConvFFT{A,B,C,D,E,F,G,true}) where {A,B,C,D,E,F,G}
@@ -128,6 +129,7 @@ function getBatchSize(c::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P <: Tup
     end
 end
 
+# is actually converting
 function adapt(Atype, x::T) where T <: CUDA.CUFFT.CuFFTPlan
     transformSize = x.osz
     dataSize = x.sz

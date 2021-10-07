@@ -9,7 +9,7 @@ averagingLengths =(-2, 0, 2); averagingLength = averagingLengths[1]
 normalizations=[1.0, Inf]; normalization = normalizations[1]
 βs = [1.0,3.5]; β = βs[1]
 σs =[identity, abs, relu]; σ = σs[1]
-function f(inputSize, cw, β, normalization, scale, averagingLength)
+function compareWithWavelet(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32,inputSize)
     W= 3; waves = 4; wWave = 4
     # for the purpose of testing, we don't need the wall of warnings
@@ -31,7 +31,7 @@ function f(inputSize, cw, β, normalization, scale, averagingLength)
 
     wWave = 5;
     with_logger(ConsoleLogger(stderr,Logging.Error)) do
-        wWave = cwt(x, waves);
+        wWave = ContinuousWavelets.cwt(x, waves);
     end
     testRes = @test size(wFFF)[1:2]==size(wWave)[1:2] # not sure why it was
     # triple equal...
@@ -56,7 +56,7 @@ end
     for inputSize in inputSizes, cw in CWs, β in βs, normalization in
         normalizations, scale in scales, averagingLength in averagingLengths
         @testset "inputSize=$inputSize, cw =$(cw), β=$β" begin
-            f(inputSize, cw, β, normalization, scale, averagingLength)
+            compareWithWavelet(inputSize, cw, β, normalization, scale, averagingLength)
         end
     end
 end
