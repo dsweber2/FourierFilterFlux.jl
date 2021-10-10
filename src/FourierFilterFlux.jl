@@ -135,7 +135,7 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ=identity; plan=true,
     else
         fftPlan = nothing
     end
-    
+
     if typeof(An) <: Nothing
         An = map(x -> NonAnalyticMatching(), (1:size(w)[end]...,))
     end
@@ -146,7 +146,7 @@ end
 function makePlan(dType, OT, w, exSz, boundary)
     N = ndims(w)
     netSize, boundary = effectiveSize(exSz[1:N - 1], boundary)
-    convDims = (1:(N-1)...,)
+    convDims = (1:(N - 1)...,)
     nullEx = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...))
     if dType <: Real && OT <: Real
         fftPlan = plan_rfft(real.(nullEx), convDims)

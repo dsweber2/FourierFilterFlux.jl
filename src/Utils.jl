@@ -103,13 +103,15 @@ function originalDomain(cv::ConvFFT{2}; σ=identity)
 end
 
 originalDomain(wav, fftPlan, An::NonAnalyticMatching) = irfft(wav, 2 * (size(wav, 1) - 1))
+
 function originalDomain(wav, fftPlan, An::AnalyticWavelet)
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
-    ifft([wav; zeros(eltype(wav), size(wav, 1) - 1 - isSourceOdd)], 1)
+    return ifft([wav; zeros(eltype(wav), size(wav, 1) - 1 - isSourceOdd)], 1)
 end
+
 function originalDomain(wav, fftPlan, An::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
-    ifft([wav; reverse(conj.(wav[2:end - isSourceOdd]))], 1)
+    return ifft([wav; reverse(conj.(wav[2:end - isSourceOdd]))], 1)
 end
 
 
@@ -130,17 +132,15 @@ function getBatchSize(c::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P <: Tup
 end
 
 # is actually converting
-function adapt(Atype, x::T) where T <: CUDA.CUFFT.CuFFTPlan
+function adapt(::Type{<:CuArray}, x::T) where T <: CUDA.CUFFT.CuFFTPlan
     transformSize = x.osz
     dataSize = x.sz
     if dataSize != transformSize
         # this is an rfft, since the dimension isn't preserved
-        newX = plan_rfft(zeros(dataSize), x.region)
-
+        return plan_rfft(zeros(dataSize), x.region)
     else
-        newX = plan_fft(zeros(dataSize), x.region)
+        return plan_fft(zeros(dataSize), x.region)
     end
-    return newX
 end
 # reredundant
 adapt(::Type{<:CuArray}, x::T) where T <: CUDA.CUFFT.CuFFTPlan = x
