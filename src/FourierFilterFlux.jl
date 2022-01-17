@@ -12,7 +12,8 @@ using Base:tail
 
 const use_cuda = Ref(false)
 
-import Adapt:adapt
+using Functors
+import Adapt: adapt
 export pad, poolSize, originalDomain, params!, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types and constructors
@@ -99,11 +100,21 @@ struct ConvFFT{D,OT,F,A,V,PD,P,T,An}
     fftPlan::P
     analytic::An
 end
-import Base:ndims
-ndims(c::ConvFFT{D}) where D = D
-function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ=identity; plan=true, boundary=Periodic(),
-                 dType=Float32, trainable=true, OT=Float32,
-                 An=nothing) where {T,N}
+function ConvFFT(σ, weight, bias, bc, fftPlan, analytic)
+    D = ndims(weight) - 1
+    if analytic !== nothing
+        OT = complex(eltype(fftPlan))
+    else
+        OT = eltype(fftPlan)
+    end
+    T = eltype(weight)
+    ConvFFT{D,OT,typeof(σ),typeof(weight),typeof(bias),typeof(bc),typeof(fftPlan),T,typeof(analytic)}(σ, weight, bias, bc, fftPlan, analytic)
+end
+import Base: ndims
+ndims(c::ConvFFT{D}) where {D} = D
+function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = true, boundary = Periodic(),
+    dType = Float32, trainable = true, OT = Float32,
+    An = nothing) where {T,N}
     @assert length(originalSize) >= N - 1
     if dType <: Complex
         OT = dType

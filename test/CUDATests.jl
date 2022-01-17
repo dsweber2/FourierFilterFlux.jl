@@ -19,7 +19,6 @@ if CUDA.functional()
         ∇ = gradient(t -> w(t)[1], x)[1]
         @test ∇ ≈ cpu(∇cu)
         w1 = waveletLayer((100, 1, 1))
-        w1(x)
         cw1 = cu(w1)
         @test cw1(cx) ≈ cu(w1(x))
 

@@ -44,15 +44,16 @@ function Adapt.adapt(::Type{Array{T}}, P::FFTW.rFFTWPlan) where T
 end
 Adapt.adapt(::Type{<:Array}, P::AbstractFFTs.Plan) = P
 Adapt.adapt(::Type{<:CuArray}, P::AbstractFFTs.Plan) = cu(P)
+Adapt.adapt(::Flux.FluxCUDAAdaptor, P::AbstractFFTs.Plan) = cu(P)
 
 
-# come back from the gpu to the cpu
-import Flux.cpu
-function cpu(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,An}
-    w = cpu(cft.weight)
-    b = cpu(cft.bias)
-    f = cpu(cft.fftPlan)
-    return ConvFFT{D,OT,F,typeof(w),typeof(b),PD,typeof(f),T,An}(cft.σ, w, b, cft.bc, f, cft.analytic)
+import Flux.cpu, Flux.gpu
+function gpu(x::ConvFFT)
+    Flux.check_use_cuda()
+    use_cuda[] ? ConvFFT(x.σ, adapt(Flux.FluxCUDAAdaptor(), x.weight), adapt(Flux.FluxCUDAAdaptor(), x.bias), x.bc, adapt(Flux.FluxCUDAAdaptor(), x.fftPlan), x.analytic) : x
+end
+function cpu(x::ConvFFT)
+    ConvFFT(x.σ, adapt(Flux.FluxCPUAdaptor(), x.weight), adapt(Flux.FluxCPUAdaptor(), x.bias), x.bc, adapt(Flux.FluxCPUAdaptor(), x.fftPlan), x.analytic)
 end
 
 
@@ -130,7 +131,7 @@ function getBatchSize(c::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P <: Tup
 end
 
 # is actually converting
-function adapt(::Type{<:Array}, x::T) where T <: CUDA.CUFFT.CuFFTPlan
+function adapt(::Union{Type{<:Array},Flux.FluxCPUAdaptor}, x::T) where {T<:CUDA.CUFFT.CuFFTPlan}
     transformSize = x.osz
     dataSize = x.sz
     if dataSize != transformSize
