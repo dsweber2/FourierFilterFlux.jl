@@ -1,5 +1,5 @@
 import NNlib.relu
-relu(x::C) where C <: Complex = real(x) > 0 ? x : C(0)
+relu(x::C) where {C<:Complex} = real(x) > 0 ? x : C(0)
 
 # ways to convert between gpu and cpu
 import Adapt.adapt
@@ -38,13 +38,27 @@ function CUDA.cu(P::FFTW.cFFTWPlan)
 end
 CUDA.cu(P::CUFFT.cCuFFTPlan) = P
 
-Adapt.adapt(::Type{Array{T}}, P::FFTW.FFTWPlan{T}) where T = P
-function Adapt.adapt(::Type{Array{T}}, P::FFTW.rFFTWPlan) where T
+Adapt.adapt(::Type{Array{T}}, P::FFTW.FFTWPlan{T}) where {T} = P
+function Adapt.adapt(::Type{Array{T}}, P::FFTW.rFFTWPlan) where {T}
     plan_rfft(zeros(real(T), P.sz), P.region)
 end
 Adapt.adapt(::Type{<:Array}, P::AbstractFFTs.Plan) = P
 Adapt.adapt(::Type{<:CuArray}, P::AbstractFFTs.Plan) = cu(P)
 Adapt.adapt(::Flux.FluxCUDAAdaptor, P::AbstractFFTs.Plan) = cu(P)
+
+# reredundant
+adapt(::Type{<:CuArray}, x::T) where {T<:CUDA.CUFFT.CuFFTPlan} = x
+# is actually converting
+function adapt(::Union{Type{<:Array},Flux.FluxCPUAdaptor}, x::T) where {T<:CUDA.CUFFT.CuFFTPlan}
+    transformSize = x.osz
+    dataSize = x.sz
+    if dataSize != transformSize
+        # this is an rfft, since the dimension isn't preserved
+        return plan_rfft(zeros(dataSize), x.region)
+    else
+        return plan_fft(zeros(dataSize), x.region)
+    end
+end
 
 
 import Flux.cpu, Flux.gpu
@@ -60,7 +74,7 @@ end
 function Flux.trainable(CFT::ConvFFT{A,B,C,D,E,F,G,true}) where {A,B,C,D,E,F,G}
     (CFT.weight, CFT.bias)
 end
-function Flux.trainable(CFT::ConvFFT{A,B,C,D,E,F,G,false}) where {A,B,C,D,E,F,G}
+function Flux.trainable(::ConvFFT{A,B,C,D,E,F,G,false}) where {A,B,C,D,E,F,G}
     tuple()
 end
 
@@ -77,7 +91,7 @@ function formatJLD(cft::ConvFFT{D,OT,F,A,V,PD,P,T,An}) where {D,OT,F,A,V,PD,P,T,
     newWeight = cft.weight |> cpu
     newBias = cft.bias |> cpu
     ConvFFT{D,OT,F,typeof(newWeight),typeof(newBias),PD,typeof(newPlan),T,An}(cft.σ, newWeight, newBias, cft.bc,
-                                        newPlan, cft.analytic)
+        newPlan, cft.analytic)
 end
 
 function formatJLD(pl::Tuple)
@@ -92,29 +106,29 @@ formatJLD(p) = p
     weights = originalDomain()
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
 """
-function originalDomain(cv::ConvFFT; σ=identity)
-    listOfWeights = eachslice(cpu(cv.weight), dims=2)
+function originalDomain(cv::ConvFFT; σ = identity)
+    listOfWeights = eachslice(cpu(cv.weight), dims = 2)
     λorig(x, an) = originalDomain(x, cv.fftPlan, an)
-    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims=2))
+    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims = 2))
 end
-function originalDomain(cv::ConvFFT{2}; σ=identity)
+function originalDomain(cv::ConvFFT{2}; σ = identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan, 1), (1, 2)))
 end
 
-originalDomain(wav, fftPlan, An::NonAnalyticMatching) = irfft(wav, 2 * (size(wav, 1) - 1))
+originalDomain(wav, fftPlan, ::NonAnalyticMatching) = irfft(wav, 2 * (size(wav, 1) - 1))
 
-function originalDomain(wav, fftPlan, An::AnalyticWavelet)
+function originalDomain(wav, fftPlan, ::AnalyticWavelet)
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
     return ifft([wav; zeros(eltype(wav), size(wav, 1) - 1 - isSourceOdd)], 1)
 end
 
-function originalDomain(wav, fftPlan, An::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
+function originalDomain(wav, fftPlan, ::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
-    return ifft([wav; reverse(conj.(wav[2:end - isSourceOdd]))], 1)
+    return ifft([wav; reverse(conj.(wav[2:end-isSourceOdd]))], 1)
 end
 
 
-function getBatchSize(c::C) where {C <: ConvFFT}
+function getBatchSize(c::C) where {C<:ConvFFT}
     if typeof(c.fftPlan) <: Tuple
         return c.fftPlan[2][end]
     else
@@ -122,27 +136,13 @@ function getBatchSize(c::C) where {C <: ConvFFT}
     end
 end
 
-function getBatchSize(c::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P <: Tuple}
+function getBatchSize(c::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:Tuple}
     if typeof(c.fftPlan[1]) <: Tuple
         return c.fftPlan[1][2][end]
     else
         return c.fftPlan[1].sz[end]
     end
 end
-
-# is actually converting
-function adapt(::Union{Type{<:Array},Flux.FluxCPUAdaptor}, x::T) where {T<:CUDA.CUFFT.CuFFTPlan}
-    transformSize = x.osz
-    dataSize = x.sz
-    if dataSize != transformSize
-        # this is an rfft, since the dimension isn't preserved
-        return plan_rfft(zeros(dataSize), x.region)
-    else
-        return plan_fft(zeros(dataSize), x.region)
-    end
-end
-# reredundant
-adapt(::Type{<:CuArray}, x::T) where T <: CUDA.CUFFT.CuFFTPlan = x
 
 function fromRestrictLocs(restrict, z, i)
     if typeof(restrict[i]) <: Colon
@@ -151,34 +151,34 @@ function fromRestrictLocs(restrict, z, i)
         return restrict[i]
     end
 end
-@recipe function f(x,y,cv::ConvFFT{2}; vis=1, dispReal=false,
-                   apply=abs, restrict=(Colon(), Colon()))
+@recipe function f(x, y, cv::ConvFFT{2}; vis = 1, dispReal = false,
+    apply = abs, restrict = (Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
         apply.(irfft(cpu(w), size(cv.fftPlan, 1),
-                     (1, 2)))[restrict...] :
-                         apply.(ifftshift(cpu(w), 2))[restrict...]
+        (1, 2)))[restrict...] :
+        apply.(ifftshift(cpu(w), 2))[restrict...]
     (x, y, z)
 end
-@recipe function f(cv::ConvFFT{2}; vis=1, dispReal=false,
-                   apply=abs, restrict=(Colon(), Colon()))
+@recipe function f(cv::ConvFFT{2}; vis = 1, dispReal = false,
+    apply = abs, restrict = (Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
-                apply.(ifftshift(irfft(cpu(w), size(cv.fftPlan, 1),
-                                  (1, 2)), (1, 2)))[restrict...] :
-                apply.(cpu(w))[restrict...]
+        apply.(ifftshift(irfft(cpu(w), size(cv.fftPlan, 1),
+            (1, 2)), (1, 2)))[restrict...] :
+        apply.(cpu(w))[restrict...]
     xSz = fromRestrictLocs(restrict, z, 2)
     x = dispReal ? xSz :
-               range(xSz[1] - size(w, 2) / 2, stop=xSz[2] + size(w, 2) / 2,
-                     length=length(xSz))
+        range(xSz[1] - size(w, 2) / 2, stop = xSz[2] + size(w, 2) / 2,
+        length = length(xSz))
     y = fromRestrictLocs(restrict, z, 1)
     (x, y, z)
 end
 
-@recipe function f(x, cv::ConvFFT{1}; vis=1, dispReal=false,
-                   apply=abs, restrict=(Colon(), vis))
+@recipe function f(x, cv::ConvFFT{1}; vis = 1, dispReal = false,
+    apply = abs, restrict = (Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
@@ -187,13 +187,13 @@ end
     end
 
     z = dispReal ?
-                apply.(irfft(cpu(w), origSize,
-                             (1,)))[restrict...] :
-                apply.(cpu(w))[restrict...]
+        apply.(irfft(cpu(w), origSize,
+        (1,)))[restrict...] :
+        apply.(cpu(w))[restrict...]
     (x, z)
 end
-@recipe function f(cv::ConvFFT{1}; vis=1, dispReal=false,
-                   apply=abs, restrict=(Colon(), vis))
+@recipe function f(cv::ConvFFT{1}; vis = 1, dispReal = false,
+    apply = abs, restrict = (Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
@@ -202,9 +202,9 @@ end
     end
 
     z = dispReal ?
-                apply.(irfft(cpu(w), origSize,
-                             (1,)))[restrict...] :
-                apply.(cpu(w))[restrict...]
+        apply.(irfft(cpu(w), origSize,
+        (1,)))[restrict...] :
+        apply.(cpu(w))[restrict...]
 
     x = 1:size(z, 1)
     (x, z)
@@ -224,7 +224,7 @@ If there are ``n`` total entries in the matrix, each entry is gaussian distribut
 """
 function uniform_perturbed_gaussian(dims...)
     netSize = prod(dims)
-    A = 1 ./ netSize  .+ randn(dims) ./ netSize / 10;
+    A = 1 ./ netSize .+ randn(dims) ./ netSize / 10
     A = Float32.(A ./ norm(A))
 end
 """

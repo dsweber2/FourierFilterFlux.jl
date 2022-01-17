@@ -2,22 +2,20 @@ module FourierFilterFlux
 using Reexport
 # @reexport using CUDA
 using CUDA
-using Zygote, Flux, Shearlab, LinearAlgebra
+using Zygote, Flux, Adapt, LinearAlgebra
 using AbstractFFTs, FFTW # TODO: check the license on FFTW and such
 using ContinuousWavelets
-using Flux
-using Adapt
+using Shearlab
 using RecipesBase
-using Base:tail
 
 const use_cuda = Ref(false)
 
 using Functors
 import Adapt: adapt
-export pad, poolSize, originalDomain, params!, formatJLD, getBatchSize
+export pad, originalDomain, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types and constructors
-export ConvFFT, waveletLayer, shearingLayer, averagingLayer
+export ConvFFT, waveletLayer, shearingLayer
 # inits
 export positive_glorot_uniform, iden_perturbed_gaussian,
     uniform_perturbed_gaussian
@@ -100,6 +98,8 @@ struct ConvFFT{D,OT,F,A,V,PD,P,T,An}
     fftPlan::P
     analytic::An
 end
+
+# the no frills constructor; useful for functor
 function ConvFFT(σ, weight, bias, bc, fftPlan, analytic)
     D = ndims(weight) - 1
     if analytic !== nothing
@@ -110,10 +110,9 @@ function ConvFFT(σ, weight, bias, bc, fftPlan, analytic)
     T = eltype(weight)
     ConvFFT{D,OT,typeof(σ),typeof(weight),typeof(bias),typeof(bc),typeof(fftPlan),T,typeof(analytic)}(σ, weight, bias, bc, fftPlan, analytic)
 end
-import Base: ndims
-ndims(c::ConvFFT{D}) where {D} = D
-function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = true, boundary = Periodic(),
-    dType = Float32, trainable = true, OT = Float32,
+
+# constructor with functional defaults and dependent type construction
+function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = true, boundary = Periodic(), dType = Float32, trainable = true, OT = Float32,
     An = nothing) where {T,N}
     @assert length(originalSize) >= N - 1
     if dType <: Complex
@@ -125,8 +124,8 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = t
     else
         exSz = originalSize
     end
-    netSize, boundary = effectiveSize(exSz[1:N - 1], boundary)
-    convDims = (1:(N - 1)...,)
+    netSize, boundary = effectiveSize(exSz[1:N-1], boundary)
+    convDims = (1:(N-1)...,)
 
     # Check that they applied the boundary condition, and if not do it ourselves
     if dType <: Complex && netSize[1] != size(w, 1)
@@ -156,14 +155,14 @@ end
 
 function makePlan(dType, OT, w, exSz, boundary)
     N = ndims(w)
-    netSize, boundary = effectiveSize(exSz[1:N - 1], boundary)
-    convDims = (1:(N - 1)...,)
+    netSize, boundary = effectiveSize(exSz[1:N-1], boundary)
+    convDims = (1:(N-1)...,)
     nullEx = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...))
     if dType <: Real && OT <: Real
         fftPlan = plan_rfft(real.(nullEx), convDims)
     elseif dType <: Real # output is complex, wavelets analytic
         null2 = Adapt.adapt(typeof(w), zeros(dType, netSize..., exSz[N:end]...)) .+
-            0im
+                0im
         fftPlan = (plan_rfft(real.(nullEx), convDims), plan_fft!(null2, convDims))
     else
         fftPlan = plan_fft!(nullEx, convDims)
@@ -171,11 +170,8 @@ function makePlan(dType, OT, w, exSz, boundary)
 end
 
 
-function ConvFFT(k::NTuple{N,Integer}, nOutputChannels=5,
-                 σ=identity; nConvDims=2, init=Flux.glorot_normal,
-                 plan=true, bias=true,
-                 dType=Float32, OT=Float32, boundary=Periodic(),
-                 trainable=true, An=nothing) where N
+# constructor with random entries
+function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5, σ = identity; nConvDims = 2, init = Flux.glorot_normal, plan = true, bias = true, dType = Float32, OT = Float32, boundary = Periodic(), trainable = true, An = nothing) where {N}
 
     effSize, boundary = effectiveSize(k[1:nConvDims], boundary)
     if dType <: Real && OT <: Real
@@ -185,15 +181,16 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels=5,
         im .* init(effSize..., nOutputChannels)
 
     if bias == true
-        b = init(k[(nConvDims + 1):end - 1]..., nOutputChannels)
+        b = init(k[(nConvDims+1):end-1]..., nOutputChannels)
     else
         b = nothing
     end
 
-    ConvFFT(w, b, k, σ, plan=plan, boundary=boundary, dType=dType,
-            trainable=trainable, OT=OT, An=An)
+    ConvFFT(w, b, k, σ, plan = plan, boundary = boundary, dType = dType,
+        trainable = trainable, OT = OT, An = An)
 end
 
+# basic methods
 function Base.show(io::IO, l::ConvFFT)
     # stored as a brief description
     if typeof(l.fftPlan) <: Tuple
@@ -201,29 +198,31 @@ function Base.show(io::IO, l::ConvFFT)
     else
         sz = l.fftPlan.sz
     end
-    es = originalSize(sz[1:ndims(l.weight) - 1], l.bc)
+    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
-          "nfilters = $(size(l.weight)[end]), " *
-          "σ=$(l.σ), " *
-          "bc=$(l.bc)]")
+              "nfilters = $(size(l.weight)[end]), " *
+              "σ=$(l.σ), " *
+              "bc=$(l.bc)]")
 end
 
-function Base.show(io::IO, l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P <: Tuple}
+function Base.show(io::IO, l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:Tuple}
     if typeof(l.fftPlan[1]) <: Tuple
         sz = l.fftPlan[1][2]
     else
         sz = l.fftPlan[1].sz
     end
-    es = originalSize(sz[1:ndims(l.weight) - 1], l.bc)
+    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
     print(io, "ConvFFT[input=($(es), " *
-          "nfilters = $(size(l.weight)[end]), " *
-          "σ=$(l.σ), " *
-          "bc=$(l.bc)]")
+              "nfilters = $(size(l.weight)[end]), " *
+              "σ=$(l.σ), " *
+              "bc=$(l.bc)]")
 end
 
-analytic(p::ConvFFT) = p.analytic != nothing
+import Base: ndims
+ndims(::ConvFFT{D}) where {D} = D
+analytic(p::ConvFFT) = p.analytic !== nothing
 
-outType(p::ConvFFT{D,OT}) where {D,OT} = OT
+outType(::ConvFFT{D,OT}) where {D,OT} = OT
 nFrames(p::ConvFFT) = size(p.weight)[end]
 
 include("transforms.jl")
@@ -231,12 +230,12 @@ include("Utils.jl")
 include("convFFTConstructors.jl")
 
 function __init__()
-  use_cuda[] = CUDA.functional() # Can be overridden after load with `Flux.use_cuda[] = false`
-  if CUDA.functional()
-    if !CUDA.has_cudnn()
-      @warn "CUDA.jl found cuda, but did not find libcudnn. Some functionality will not be available."
-end
-  end
+    use_cuda[] = CUDA.functional() # Can be overridden after load with `Flux.use_cuda[] = false`
+    if CUDA.functional()
+        if !CUDA.has_cudnn()
+            @warn "CUDA.jl found cuda, but did not find libcudnn. Some functionality will not be available."
+        end
+    end
 end
 
 end # module

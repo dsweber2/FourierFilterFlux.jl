@@ -1,6 +1,6 @@
 if CUDA.functional()
     @testset "CUDA methods" begin
-        w = ConvFFT((100,), nConvDims=1)
+        w = ConvFFT((100,), nConvDims = 1)
         @test cu(w.fftPlan) isa CUFFT.rCuFFTPlan # does cu work on the fft plans when applied directly?
         cw = cu(w)
         @test cw.weight isa CuArray # does cu work on the weights?
