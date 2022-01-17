@@ -10,7 +10,6 @@ using RecipesBase
 
 const use_cuda = Ref(false)
 
-using Functors
 import Adapt: adapt
 export pad, originalDomain, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
