@@ -21,7 +21,7 @@ create a ConvFFT layer that uses shearlets from [Shearlab.jl](https://arsenal997
 - `averagingLayer:Bool=false`: sets whether or not to only apply just the
                                averaging filter.
 """
-function shearingLayer(inputSize::Union{Int,NTuple{N,T}}; scale = -1, shearLevel = scale, bias = false, dType = Float32, σ = abs, trainable = false, plan = true, boundary = Pad(-1, -1), averagingLayer = false) where {N,T}
+function shearingLayer(inputSize::Union{Int,NTuple}; scale = -1, shearLevel = scale, bias = false, dType = Float32, σ = abs, trainable = false, plan = true, boundary = Pad(-1, -1), averagingLayer = false)
 
     scale = defaultShearletScale(inputSize, scale)
     if shearLevel < 0

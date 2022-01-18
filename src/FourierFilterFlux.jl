@@ -111,8 +111,7 @@ function ConvFFT(σ, weight, bias, bc, fftPlan, analytic)
 end
 
 # constructor with functional defaults and dependent type construction
-function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = true, boundary = Periodic(), dType = Float32, trainable = true, OT = Float32,
-    An = nothing) where {T,N}
+function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = true, boundary = Periodic(), dType = Float32, trainable = true, OT = Float32, An = nothing) where {T,N}
     @assert length(originalSize) >= N - 1
     if dType <: Complex
         OT = dType
