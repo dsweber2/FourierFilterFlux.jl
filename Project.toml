@@ -15,7 +15,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-Shearlab = "bd728e11-17d4-5679-9a00-f24958f87a1c"
 Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 

@@ -5,7 +5,6 @@ using CUDA
 using Zygote, Flux, Adapt, LinearAlgebra
 using AbstractFFTs, FFTW # TODO: check the license on FFTW and such
 using ContinuousWavelets
-using Shearlab
 using RecipesBase
 
 const use_cuda = Ref(false)
@@ -14,7 +13,7 @@ import Adapt: adapt
 export pad, originalDomain, formatJLD, getBatchSize
 export Periodic, Pad, ConvBoundary, Sym, analytic, outType, nFrames
 # layer types and constructors
-export ConvFFT, waveletLayer, shearingLayer
+export ConvFFT, waveletLayer
 # inits
 export positive_glorot_uniform, iden_perturbed_gaussian,
     uniform_perturbed_gaussian
