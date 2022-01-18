@@ -57,8 +57,12 @@ struct NonAnalyticMatching <: TransformTypes end
 function internalConvFFT(x̂, shears::AbstractArray{<:Number,N}, usedInds,
     fftPlan, bias, isAnalytic) where {N}
     axShear = axes(shears)
-    @views łλ(ii, bias) = applyWeight(x̂, shears[axShear[1:end-1]..., ii], usedInds, fftPlan, bias[ii], isAnalytic[ii])
-    @views łλ(ii, bias::Nothing) = applyWeight(x̂, shears[axShear[1:end-1]..., ii], usedInds, fftPlan, bias, isAnalytic[ii])
+    axx = axes(x̂)[N:end-1]
+    function łλ(ii, bias)
+        @views shearAccess = CUDA.@allowscalar shears[axShear[1:end-1]..., ii]
+        @views applyWeight(x̂, shearAccess, usedInds, fftPlan, bias[ii], isAnalytic[ii])
+    end
+    @views łλ(ii, bias::Nothing) = CUDA.@allowscalar applyWeight(x̂, shears[axShear[1:end-1]..., ii], usedInds, fftPlan, bias, isAnalytic[ii])
     @views mapped = map(ii -> łλ(ii, bias), 1:size(shears)[end])
     return permutedims(cat(mapped..., dims = 1), ((2:N)..., 1, (N+1):ndims(mapped[1])...))
 end

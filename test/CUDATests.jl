@@ -27,3 +27,21 @@ if CUDA.functional()
         @test ∇ ≈ cpu(∇cu)
     end
 end
+using Zygote, CUDA
+CUDA.allowscalar(true)
+f(x) = CUDA.@allowscalar x[3]
+gradient(f, cu(randn(10, 5)))
+g(x) = x[3]
+gradient(g, cu(randn(10, 5)))
+gradient(g, randn(10, 5))
+f(cu(randn(10, 5)))
+
+CUDA.allowscalar() do
+    h(x) = x[3]
+end
+function h(x)
+    CUDA.allowscalar(true)
+    return x[3]
+end
+h(cu(randn(10, 5)))
+gradient(h, randn(10, 5))
