@@ -22,7 +22,7 @@
 
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
             plan = true, boundary = Pad(padding), trainable = true)
-        @test params(shears).order[1] == shears.weight
+        @test params(shears).order[1] == shears.weight[1]
         @test length(params(shears).order) == 1
 
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
@@ -68,12 +68,12 @@
         @test minimum(abs.(diag(∇[1][:, :, 1, 1])) .≈ 2.0f0 / 31 / 21)
 
         ax = axes(x̂)[3:end-1]
-        ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[:, :, 1], usedInds,
+        ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[1], usedInds,
                 shears.fftPlan,
                 shears.bias, FourierFilterFlux.NonAnalyticMatching())[1, 1, 1, 1, 1], x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1, 1])) .≈ 2.0f0 / 31 / 21)
 
-        ∇ = gradient((x̂) -> (shears.fftPlan\(x̂.*shears.weight[:, :, 1]))[1, 1, 1, 1], x̂)
+        ∇ = gradient((x̂) -> (shears.fftPlan\(x̂.*shears.weight[1]))[1, 1, 1, 1], x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1, 1])) .≈ 1.0f0 / 31 * 2 / 21)
         sheared = shears(x)
         @test size(sheared) == (21, 11, 1, 1, 10)
@@ -88,12 +88,12 @@
         # convert to a gpu version
         if CUDA.functional()
             gpuVer = shears |> gpu
-            @test typeof(gpuVer.weight) <: CuArray
-            @test typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan
-            if !(typeof(gpuVer.weight) <: CuArray)
+            @test gpuVer.weight[1] isa CuArray
+            @test gpuVer.fftPlan isa CUFFT.rCuFFTPlan
+            if !(gpuVer.weight[1] isa CuArray)
                 println("gpuVer.weight is of type $(typeof(gpuVer.weight))")
             end
-            if !(typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan)
+            if !(gpuVer.fftPlan isa CUFFT.rCuFFTPlan)
                 println("gpuVer.fftPlan is of type $(typeof(gpuVer.fftPlan))")
             end
         end
@@ -107,7 +107,8 @@
         @test shears.bc.padBy == (5, 5)
         wSize = originalSize[1:2] .+ (10, 10)
         wSize = (wSize[1] >> 1 + 1, wSize[2], 3)
-        @test size(shears.weight) == wSize
+        @test size(shears.weight[1]) == wSize[1:2]
+        @test length(shears.weight) == wSize[3]
 
         # random initialization
         originalSize = (20, 10, 16, 1, 10)
@@ -115,11 +116,13 @@
             plan = true, boundary = Pad((5, 5)))
         @test size(shears.fftPlan) == originalSize .+ (10, 10, 0, 0, 0)
         @test shears.σ == abs
-        @test size(shears.bias) == (originalSize[3:4]..., 3)
+        @test size(shears.bias[1]) == (originalSize[3:4]...,)
+        @test length(shears.bias) == 3
         @test shears.bc.padBy == (5, 5)
         wSize = originalSize[1:2] .+ (10, 10)
         wSize = (wSize[1] >> 1 + 1, wSize[2], 3)
-        @test size(shears.weight) == wSize
+        @test size(shears.weight[1]) == wSize[1:2]
+        @test length(shears.weight) == wSize[3]
     end
 
 
@@ -136,7 +139,7 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test shears.bc.padBy == (5,)
-            @test params(shears).order[1] == shears.weight
+            @test params(shears).order[1] == shears.weight[1]
 
             shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
                 plan = true, boundary = Pad(padding), trainable = false)
@@ -154,7 +157,7 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test typeof(shears.bc) <: Sym
-            @test params(shears).order[1] == shears.weight
+            @test params(shears).order[1] == shears.weight[1]
             x = randn(21, 1, 10)
             ∇ = gradient((x) -> shears(x)[1, 1, 1, 3], x)
             @test minimum(∇[1][:, :, [1:2..., 4:10...]] .≈ 0)
@@ -166,7 +169,7 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test typeof(shears.bc) <: FourierFilterFlux.Periodic
-            @test params(shears).order[1] == shears.weight
+            @test params(shears).order[1] == shears.weight[1]
             x = randn(21, 1, 10)
             ∇ = gradient((x) -> shears(x)[1, 1, 1, 3], x)
             @test minimum(∇[1][:, :, [1:2..., 4:10...]] .≈ 0)
@@ -225,21 +228,16 @@
 
 
         using FourierFilterFlux: applyWeight, applyBC, internalConvFFT
-        weight = 2 .* ones(Complex{Float32}, (21 + 10) >> 1 + 1, 1)
+        weight = (2 .* ones(Complex{Float32}, (21 + 10) >> 1 + 1),)
         bc = Pad(5)
         x = randn(Float32, 21, 1, 10)
         xbc, usedInds = applyBC(x, bc, 1)
         x̂ = rfft(xbc, (1,))
         fftPlan = plan_rfft(xbc, (1,))
-        An = map(x -> FourierFilterFlux.NonAnalyticMatching(), (1:size(weight)[end]...,))
-        nextLayer = internalConvFFT(x̂, weight, usedInds, fftPlan,
-            nothing, An)
-        ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
-                nothing, An)[1, 1, 1, 1, 1],
-            x̂)
-        y, ∂ = pullback((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan,
-                nothing, An)[1, 1, 1, 1, 1],
-            x̂)
+        An = map(x -> FourierFilterFlux.NonAnalyticMatching(), (1:length(weight)...,))
+        nextLayer = internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)
+        ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1, 1, 1, 1, 1], x̂)
+        y, ∂ = pullback((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1, 1, 1, 1, 1], x̂)
         ∂(y)
         ∂(y) # repeated calls to the derivative were causing errors while argWrapper
         # was in use
@@ -248,16 +246,13 @@
 
         # no bias, analytic (so complex valued)
         fftPlan = plan_fft(xbc, (1,))
-        ∇ = gradient((x̂) -> abs(applyWeight(x̂, weight[:, 1], usedInds, fftPlan,
-                nothing, FourierFilterFlux.AnalyticWavelet())[1, 1, 1, 1]),
-            x̂)
+        ∇ = gradient((x̂) -> abs(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.AnalyticWavelet())[1, 1, 1, 1]), x̂)
         @test minimum(abs.(∇[1][:, 1, 1]) .≈ 2.0f0 / 31)
 
         # no bias, not analytic, complex valued, but still symmetric
+        real(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.RealWaveletRealSignal()))
         fftPlan = plan_fft(xbc, (1,))
-        ∇ = gradient((x̂) -> real(applyWeight(x̂, weight[:, 1], usedInds, fftPlan,
-                nothing, FourierFilterFlux.RealWaveletRealSignal())[1, 1, 1, 1]),
-            x̂)
+        ∇ = gradient((x̂) -> real(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.RealWaveletRealSignal())[1, 1, 1, 1]), x̂)
         @test minimum(abs.(∇[1][2:end, 1, 1]) .≈ 2 * 2.0f0 / 31)
         @test abs(∇[1][1, 1, 1]) ≈ 2.0f0 / 31
 
@@ -287,7 +282,7 @@
         # no bias, not analytic, complex valued, but still symmetric
         # biased (and one of the others, doesn't matter which)
 
-        ∇ = gradient((x̂) -> (shears.fftPlan\(x̂.*shears.weight[:, :, 1]))[1, 1, 1, 1], x̂)
+        ∇ = gradient((x̂) -> (shears.fftPlan\(x̂.*shears.weight[1]))[1, 1, 1, 1], x̂)
         @test minimum(abs.(∇[1][:, :, 1, 1]) .≈ 1.0f0 / 31 * 2)
         sheared = shears(x)
         @test size(sheared) == (21, 1, 1, 10)
@@ -295,8 +290,8 @@
         # convert to a gpu version
         if CUDA.functional()
             gpuVer = shears |> gpu
-            @test typeof(gpuVer.weight) <: CuArray
-            @test typeof(gpuVer.fftPlan) <: CUFFT.rCuFFTPlan
+            @test gpuVer.weight[1] isa CuArray
+            @test gpuVer.fftPlan isa CUFFT.rCuFFTPlan
         end
         # extra channel dimension
         originalSize = (20, 16, 1, 10)
@@ -307,7 +302,8 @@
         @test shears.bias == nothing
         @test shears.bc.padBy == (5,)
         wSize = ((originalSize[1] + (10)) >> 1 + 1, 3)
-        @test size(shears.weight) == wSize
+        @test size(shears.weight[1]) == wSize[1:end-1]
+        @test length(shears.weight) == wSize[end]
 
         # random initialization
         originalSize = (20, 16, 1, 10)
@@ -315,9 +311,10 @@
             plan = true, boundary = Pad(5), nConvDims = 1)
         @test size(shears.fftPlan) == originalSize .+ (10, 0, 0, 0)
         @test shears.σ == abs
-        @test size(shears.bias) == (originalSize[2:end-1]..., 3)
+        @test size(shears.bias[1]) == (originalSize[2:end-1]...,)
         @test shears.bc.padBy == (5,)
         wSize = ((originalSize[1] + 10) >> 1 + 1, 3)
-        @test size(shears.weight) == wSize
+        @test size(shears.weight[1]) == wSize[1:end-1]
+        @test length(shears.weight) == wSize[end]
     end
 end

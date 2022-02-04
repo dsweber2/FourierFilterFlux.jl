@@ -1,11 +1,10 @@
-using Zygote: @show, hook
 # TODO: version that doesn't have an fft built in
 
 function (shears::ConvFFT)(x)
     if typeof(shears.weight) <: CuArray && !(typeof(x) <: CuArray)
         error("don't try to apply a gpu transform to a non-CuArray")
     end
-    xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight) - 1)
+    xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight[1]))
 
     F = shears.fftPlan
     if F isa Nothing
@@ -33,7 +32,7 @@ function (shears::ConvFFT{D,OT,A,B,C,PD,P})(x) where {D,OT,A,B,C,PD,P<:Tuple}
                                              typeof(x) <: CuArray)
         error("don't try to apply a gpu transform to a non-CuArray")
     end
-    xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight) - 1)
+    xbc, usedInds = applyBC(x, shears.bc, ndims(shears.weight[1]))
 
     Forward = shears.fftPlan[1]
     if size(xbc) != size(Forward)
@@ -54,17 +53,15 @@ struct RealWaveletRealSignal <: TransformTypes end
 struct RealWaveletComplexSignal <: TransformTypes end
 struct NonAnalyticMatching <: TransformTypes end
 
-function internalConvFFT(x̂, shears::AbstractArray{<:Number,N}, usedInds,
-    fftPlan, bias, isAnalytic) where {N}
-    axShear = axes(shears)
-    axx = axes(x̂)[N:end-1]
+function internalConvFFT(x̂, shears, usedInds, fftPlan, bias, isAnalytic)
+    N = ndims(shears[1])
     function łλ(ii, bias)
-        @views shearAccess = CUDA.@allowscalar shears[axShear[1:end-1]..., ii]
+        @views shearAccess = shears[ii]
         @views applyWeight(x̂, shearAccess, usedInds, fftPlan, bias[ii], isAnalytic[ii])
     end
-    @views łλ(ii, bias::Nothing) = CUDA.@allowscalar applyWeight(x̂, shears[axShear[1:end-1]..., ii], usedInds, fftPlan, bias, isAnalytic[ii])
-    @views mapped = map(ii -> łλ(ii, bias), 1:size(shears)[end])
-    return permutedims(cat(mapped..., dims = 1), ((2:N)..., 1, (N+1):ndims(mapped[1])...))
+    @views łλ(ii, bias::Nothing) = applyWeight(x̂, shears[ii], usedInds, fftPlan, bias, isAnalytic[ii])
+    @views mapped = map(ii -> łλ(ii, bias), 1:length(shears))
+    return permutedims(cat(mapped..., dims = 1), ((2:N+1)..., 1, (N+2):ndims(mapped[1])...))
 end
 
 # no bias, not analytic and both match (either both real or both complex)

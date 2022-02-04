@@ -99,15 +99,25 @@ struct ConvFFT{D,OT,F,A,V,PD,P,T,An}
 end
 
 # the no frills constructor; useful for functor
-function ConvFFT(σ, weight, bias, bc, fftPlan, analytic)
-    D = ndims(weight) - 1
+function ConvFFT(σ, weight, bias, bc, fftPlan, analytic; trainable = true)
+    if weight isa AbstractArray
+        D = ndims(weight) - 1
+        axW = axes(weight)
+        weight = Tuple(weight[axW[1:end-1]..., ii] for ii in axW[end])
+    else
+        D = ndims(weight[1])
+    end
+
     if analytic !== nothing
-        OT = complex(eltype(fftPlan))
+        if fftPlan isa Tuple
+            OT = complex(eltype(fftPlan[1]))
+        else
+            OT = complex(eltype(fftPlan))
+        end
     else
         OT = eltype(fftPlan)
     end
-    T = eltype(weight)
-    ConvFFT{D,OT,typeof(σ),typeof(weight),typeof(bias),typeof(bc),typeof(fftPlan),T,typeof(analytic)}(σ, weight, bias, bc, fftPlan, analytic)
+    ConvFFT{D,OT,typeof(σ),typeof(weight),typeof(bias),typeof(bc),typeof(fftPlan),trainable,typeof(analytic)}(σ, weight, bias, bc, fftPlan, analytic)
 end
 
 # constructor with functional defaults and dependent type construction
@@ -144,16 +154,16 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = t
         fftPlan = nothing
     end
 
+    # convert w to a tuple of arrays of size N-1 rather than an array of size N
+    axW = axes(w)
+    w = Tuple(w[axW[1:end-1]..., ii] for ii in axW[end])
+
+
     if typeof(An) <: Nothing
-        An = map(x -> NonAnalyticMatching(), (1:size(w)[end]...,))
+        An = map(x -> NonAnalyticMatching(), (axW[end]...,))
     end
 
-    if b == false || b === nothing
-        b = nothing
-    end
-
-
-    return ConvFFT{N - 1,OT,typeof(σ),typeof(w),typeof(b),typeof(boundary),typeof(fftPlan),trainable,typeof(An)}(σ, w, b, boundary, fftPlan, An)
+    return ConvFFT(σ, w, b, boundary, fftPlan, An; trainable = trainable)
 end
 
 function makePlan(dType, OT, w, exSz, boundary)
@@ -185,6 +195,8 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels = 5, σ = identity; nConv
 
     if bias == true
         b = init(k[(nConvDims+1):end-1]..., nOutputChannels)
+        axB = axes(b)
+        b = Tuple(b[axB[1:end-1]..., ii] for ii in axB[end])
     else
         b = nothing
     end
@@ -201,9 +213,9 @@ function Base.show(io::IO, l::ConvFFT)
     else
         sz = l.fftPlan.sz
     end
-    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
+    es = originalSize(sz[1:ndims(l.weight[1])], l.bc)
     print(io, "ConvFFT[input=($(es), " *
-              "nfilters = $(size(l.weight)[end]), " *
+              "nfilters = $(length(l.weight)), " *
               "σ=$(l.σ), " *
               "bc=$(l.bc)]")
 end
@@ -214,9 +226,9 @@ function Base.show(io::IO, l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:
     else
         sz = l.fftPlan[1].sz
     end
-    es = originalSize(sz[1:ndims(l.weight)-1], l.bc)
+    es = originalSize(sz[1:ndims(l.weight[1])], l.bc)
     print(io, "ConvFFT[input=($(es), " *
-              "nfilters = $(size(l.weight)[end]), " *
+              "nfilters = $(length(l.weight)), " *
               "σ=$(l.σ), " *
               "bc=$(l.bc)]")
 end
