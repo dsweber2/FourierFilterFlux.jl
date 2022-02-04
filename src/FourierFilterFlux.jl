@@ -148,6 +148,11 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ = identity; plan = t
         An = map(x -> NonAnalyticMatching(), (1:size(w)[end]...,))
     end
 
+    if b == false || b === nothing
+        b = nothing
+    end
+
+
     return ConvFFT{N - 1,OT,typeof(σ),typeof(w),typeof(b),typeof(boundary),typeof(fftPlan),trainable,typeof(An)}(σ, w, b, boundary, fftPlan, An)
 end
 
