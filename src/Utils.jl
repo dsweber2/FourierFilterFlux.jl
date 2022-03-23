@@ -106,12 +106,12 @@ formatJLD(p) = p
     weights = originalDomain()
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
 """
-function originalDomain(cv::ConvFFT; σ = identity)
-    listOfWeights = eachslice(cpu(cv.weight), dims = 2)
+function originalDomain(cv::ConvFFT; σ=identity)
+    listOfWeights = eachslice(cpu(cv.weight), dims=2)
     λorig(x, an) = originalDomain(x, cv.fftPlan, an)
-    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims = 2))
+    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims=2))
 end
-function originalDomain(cv::ConvFFT{2}; σ = identity)
+function originalDomain(cv::ConvFFT{2}; σ=identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan, 1), (1, 2)))
 end
 
@@ -151,8 +151,8 @@ function fromRestrictLocs(restrict, z, i)
         return restrict[i]
     end
 end
-@recipe function f(x, y, cv::ConvFFT{2}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), Colon()))
+@recipe function f(x, y, cv::ConvFFT{2}; vis=1, dispReal=false,
+    apply=abs, restrict=(Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
@@ -161,8 +161,8 @@ end
         apply.(ifftshift(cpu(w), 2))[restrict...]
     (x, y, z)
 end
-@recipe function f(cv::ConvFFT{2}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), Colon()))
+@recipe function f(cv::ConvFFT{2}; vis=1, dispReal=false,
+    apply=abs, restrict=(Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
@@ -171,14 +171,14 @@ end
         apply.(cpu(w))[restrict...]
     xSz = fromRestrictLocs(restrict, z, 2)
     x = dispReal ? xSz :
-        range(xSz[1] - size(w, 2) / 2, stop = xSz[2] + size(w, 2) / 2,
-        length = length(xSz))
+        range(xSz[1] - size(w, 2) / 2, stop=xSz[2] + size(w, 2) / 2,
+        length=length(xSz))
     y = fromRestrictLocs(restrict, z, 1)
     (x, y, z)
 end
 
-@recipe function f(x, cv::ConvFFT{1}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), vis))
+@recipe function f(x, cv::ConvFFT{1}; vis=1, dispReal=false,
+    apply=abs, restrict=(Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
@@ -192,8 +192,8 @@ end
         apply.(cpu(w))[restrict...]
     (x, z)
 end
-@recipe function f(cv::ConvFFT{1}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), vis))
+@recipe function f(cv::ConvFFT{1}; vis=1, dispReal=false,
+    apply=abs, restrict=(Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
@@ -241,3 +241,25 @@ function iden_perturbed_gaussian(dims...) # only works for the 2d case
     end
 end
 # doubly stochastic matrix (Probably more work than it's worth)
+
+
+import Base: size
+function size(l::C) where {C<:ConvFFT}
+    if typeof(l.fftPlan) <: Tuple
+        sz = l.fftPlan[2]
+    else
+        sz = l.fftPlan.sz
+    end
+    signalSize = originalSize(sz[1:ndims(l.weight[1])], l.bc)
+    return (signalSize..., sz[(ndims(l.weight[1])+1):end]...)
+end
+
+function size(l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:Tuple}
+    if typeof(l.fftPlan[1]) <: Tuple
+        sz = l.fftPlan[1][2]
+    else
+        sz = l.fftPlan[1].sz
+    end
+    signalSize = originalSize(sz[1:ndims(l.weight[1])], l.bc)
+    return (signalSize..., sz[(ndims(l.weight[1])+1):end]...)
+end
