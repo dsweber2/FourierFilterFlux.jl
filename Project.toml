@@ -1,7 +1,7 @@
 name = "FourierFilterFlux"
 uuid = "3d7dfd45-6c90-4c9b-b697-194a05757159"
 authors = ["dsweber2"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
