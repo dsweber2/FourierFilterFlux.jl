@@ -107,9 +107,8 @@ formatJLD(p) = p
 given a ConvFFT, get the weights as represented in the time domain. optionally, apply a function σ to each pointwise afterward
 """
 function originalDomain(cv::ConvFFT; σ=identity)
-    listOfWeights = eachslice(cpu(cv.weight), dims=2)
     λorig(x, an) = originalDomain(x, cv.fftPlan, an)
-    σ.(cat(map(λorig, listOfWeights, cv.analytic)..., dims=2))
+    σ.(cat(map(λorig, cv.weight, cv.analytic)..., dims=2))
 end
 function originalDomain(cv::ConvFFT{2}; σ=identity)
     σ.(irfft(cpu(cv.weight), size(cv.fftPlan, 1), (1, 2)))
