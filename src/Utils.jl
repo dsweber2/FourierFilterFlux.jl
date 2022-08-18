@@ -155,9 +155,9 @@ end
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
-        apply.(irfft(cpu(w), size(cv.fftPlan, 1),
+        apply.(irfft(cpu(cat(w...,dims=3)), size(cv.fftPlan, 1),
         (1, 2)))[restrict...] :
-        apply.(ifftshift(cpu(w), 2))[restrict...]
+        apply.(ifftshift(cpu(cat(w...,dims=3)), 2))[restrict...]
     (x, y, z)
 end
 @recipe function f(cv::ConvFFT{2}; vis=1, dispReal=false,
@@ -165,13 +165,13 @@ end
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
-        apply.(ifftshift(irfft(cpu(w), size(cv.fftPlan, 1),
+        apply.(ifftshift(irfft(cpu(cat(w...,dims=3)), size(cv.fftPlan, 1),
             (1, 2)), (1, 2)))[restrict...] :
-        apply.(cpu(w))[restrict...]
+        apply.(cpu(cat(w...,dims=3)))[restrict...]
     xSz = fromRestrictLocs(restrict, z, 2)
-    x = dispReal ? xSz :
-        range(xSz[1] - size(w, 2) / 2, stop=xSz[2] + size(w, 2) / 2,
-        length=length(xSz))
+    x = dispReal ?
+        xSz :
+        range(xSz.start - size(w[1], 2) / 2, stop=xSz.stop + size(w[1], 2) / 2, length=length(xSz))
     y = fromRestrictLocs(restrict, z, 1)
     (x, y, z)
 end
@@ -201,9 +201,8 @@ end
     end
 
     z = dispReal ?
-        apply.(irfft(cpu(w), origSize,
-        (1,)))[restrict...] :
-        apply.(cpu(w))[restrict...]
+        apply.(irfft(cpu(cat(w..., dims=2)), origSize, (1,)))[restrict...] :
+        apply.(cpu(cat(w..., dims=2)))[restrict...]
 
     x = 1:size(z, 1)
     (x, z)

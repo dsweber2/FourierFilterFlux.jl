@@ -22,12 +22,12 @@
 
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
             plan = true, boundary = Pad(padding), trainable = true)
-        @test params(shears).order[1] == shears.weight[1]
-        @test length(params(shears).order) == 1
+        @test Flux.params(shears).order[1] == shears.weight[1]
+        @test length(Flux.params(shears).order) == 1
 
         shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
             boundary = Pad(padding), trainable = false)
-        @test isempty(params(shears))
+        @test isempty(Flux.params(shears))
 
         x = randn(21, 11, 1, 10)
         ∇ = gradient((x) -> shears(x)[1, 1, 1, 1, 3], x)
@@ -139,11 +139,11 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test shears.bc.padBy == (5,)
-            @test params(shears).order[1] == shears.weight[1]
+            @test Flux.params(shears).order[1] == shears.weight[1]
 
             shears = ConvFFT(weightMatrix, nothing, originalSize, abs,
                 plan = true, boundary = Pad(padding), trainable = false)
-            @test isempty(params(shears))
+            @test isempty(Flux.params(shears))
 
             x = randn(21, 1, 10)
             ∇ = gradient((x) -> shears(x)[1, 1, 1, 3], x)
@@ -157,7 +157,7 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test typeof(shears.bc) <: Sym
-            @test params(shears).order[1] == shears.weight[1]
+            @test Flux.params(shears).order[1] == shears.weight[1]
             x = randn(21, 1, 10)
             ∇ = gradient((x) -> shears(x)[1, 1, 1, 3], x)
             @test minimum(∇[1][:, :, [1:2..., 4:10...]] .≈ 0)
@@ -169,7 +169,7 @@
             @test shears.σ == abs
             @test shears.bias == nothing
             @test typeof(shears.bc) <: FourierFilterFlux.Periodic
-            @test params(shears).order[1] == shears.weight[1]
+            @test Flux.params(shears).order[1] == shears.weight[1]
             x = randn(21, 1, 10)
             ∇ = gradient((x) -> shears(x)[1, 1, 1, 3], x)
             @test minimum(∇[1][:, :, [1:2..., 4:10...]] .≈ 0)
