@@ -41,7 +41,10 @@ end
         function minimalTransform(shears, init)
             equivalent = zeros(16, 5, 1, 2)
             for i = 1:5
-                equivalent[:, i, :, :] = irfft(rfft(pad(init, shears.bc.padBy), (1,)) .* shears.weight[i], 16, (1,)) .+ shears.bias[i]
+                equivalent[:, i, :, :] = irfft(rfft(pad(init, shears.bc.padBy), (1,)) .*
+                                               shears.weight[i],
+                    16,
+                    (1,)) .+ shears.bias[i]
             end
             return equivalent[4:13, :, :, :]
         end

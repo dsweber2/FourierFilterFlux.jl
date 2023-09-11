@@ -3,11 +3,11 @@ ENV["PLOTS_TEST"] = "true"
 ENV["GKSwstype"] = "100"
 ENV["LINES"] = "9"
 ENV["COLUMNS"] = "60"
-makedocs(sitename="FourierFilterFlux.jl",
-    authors="David Weber",
-    clean=true,
-    format=Documenter.HTML(),
-    pages=[
+makedocs(sitename = "FourierFilterFlux.jl",
+    authors = "David Weber",
+    clean = true,
+    format = Documenter.HTML(),
+    pages = [
         "Install" => "installation.md",
         "ConvFFT" => [
             "Core Type" => "coreType.md",
@@ -16,6 +16,4 @@ makedocs(sitename="FourierFilterFlux.jl",
         ],
         "Built-in Constructors" => "constructors.md"
     ])
-deploydocs(
-    repo="github.com/dsweber2/FourierFilterFlux.jl.git",
-)
+deploydocs(repo = "github.com/dsweber2/FourierFilterFlux.jl.git")

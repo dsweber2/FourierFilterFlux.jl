@@ -115,7 +115,8 @@ for (TYPE, CONVERT) in ((AbstractArray, identity),
 end
 
 Zygote.@adjoint function pad(x, padBy::Union{<:Integer,NTuple{1,<:Integer}})
-    return pad(x, padBy), function (Δ)
+    return pad(x, padBy),
+    function (Δ)
         axΔ = axes(Δ)
         return (Δ[(1+padBy[1]):(end-padBy[1]), axΔ[2:end]...],
             nothing)
@@ -131,7 +132,8 @@ Zygote.@adjoint function applyBC(x, bc::Periodic, nd)
 end
 
 Zygote.@adjoint function applyBC(x, bc::Sym, nd)
-    return applyBC(x, bc, nd), function (Δ)
+    return applyBC(x, bc, nd),
+    function (Δ)
         xbc, usedInds = Δ
         ax = axes(x)
         aΔ = axes(xbc)

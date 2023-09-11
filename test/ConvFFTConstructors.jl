@@ -63,14 +63,22 @@
                 shears.weight,
                 usedInds,
                 shears.fftPlan,
-                shears.bias, shears.analytic)[1, 1, 1, 1, 1],
+                shears.bias, shears.analytic)[1,
+                1,
+                1,
+                1,
+                1],
             x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1, 1])) .≈ 2.0f0 / 31 / 21)
 
         ax = axes(x̂)[3:end-1]
         ∇ = gradient((x̂) -> FourierFilterFlux.applyWeight(x̂, shears.weight[1], usedInds,
                 shears.fftPlan,
-                shears.bias, FourierFilterFlux.NonAnalyticMatching())[1, 1, 1, 1, 1], x̂)
+                shears.bias, FourierFilterFlux.NonAnalyticMatching())[1,
+                1,
+                1,
+                1,
+                1], x̂)
         @test minimum(abs.(diag(∇[1][:, :, 1, 1])) .≈ 2.0f0 / 31 / 21)
 
         ∇ = gradient((x̂) -> (shears.fftPlan\(x̂.*shears.weight[1]))[1, 1, 1, 1], x̂)
@@ -236,8 +244,18 @@
         fftPlan = plan_rfft(xbc, (1,))
         An = map(x -> FourierFilterFlux.NonAnalyticMatching(), (1:length(weight)...,))
         nextLayer = internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)
-        ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1, 1, 1, 1, 1], x̂)
-        y, ∂ = pullback((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1, 1, 1, 1, 1], x̂)
+        ∇ = gradient((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1,
+                1,
+                1,
+                1,
+                1],
+            x̂)
+        y, ∂ = pullback((x̂) -> internalConvFFT(x̂, weight, usedInds, fftPlan, nothing, An)[1,
+                1,
+                1,
+                1,
+                1],
+            x̂)
         ∂(y)
         ∂(y) # repeated calls to the derivative were causing errors while argWrapper
         # was in use
@@ -246,13 +264,36 @@
 
         # no bias, analytic (so complex valued)
         fftPlan = plan_fft(xbc, (1,))
-        ∇ = gradient((x̂) -> abs(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.AnalyticWavelet())[1, 1, 1, 1]), x̂)
+        ∇ = gradient((x̂) -> abs(applyWeight(x̂,
+                weight[1],
+                usedInds,
+                fftPlan,
+                nothing,
+                FourierFilterFlux.AnalyticWavelet())[1,
+                1,
+                1,
+                1]),
+            x̂)
         @test minimum(abs.(∇[1][:, 1, 1]) .≈ 2.0f0 / 31)
 
         # no bias, not analytic, complex valued, but still symmetric
-        real(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.RealWaveletRealSignal()))
+        real(applyWeight(x̂,
+            weight[1],
+            usedInds,
+            fftPlan,
+            nothing,
+            FourierFilterFlux.RealWaveletRealSignal()))
         fftPlan = plan_fft(xbc, (1,))
-        ∇ = gradient((x̂) -> real(applyWeight(x̂, weight[1], usedInds, fftPlan, nothing, FourierFilterFlux.RealWaveletRealSignal())[1, 1, 1, 1]), x̂)
+        ∇ = gradient((x̂) -> real(applyWeight(x̂,
+                weight[1],
+                usedInds,
+                fftPlan,
+                nothing,
+                FourierFilterFlux.RealWaveletRealSignal())[1,
+                1,
+                1,
+                1]),
+            x̂)
         @test minimum(abs.(∇[1][2:end, 1, 1]) .≈ 2 * 2.0f0 / 31)
         @test abs(∇[1][1, 1, 1]) ≈ 2.0f0 / 31
 
@@ -272,7 +313,11 @@
                 shears.weight,
                 usedInds,
                 shears.fftPlan,
-                shears.bias, shears.analytic)[1, 1, 1, 1, 1],
+                shears.bias, shears.analytic)[1,
+                1,
+                1,
+                1,
+                1],
             x̂)
         @test minimum(abs.(∇[1][:, 1, 1]) .≈ 2.0f0 / 31)
         #

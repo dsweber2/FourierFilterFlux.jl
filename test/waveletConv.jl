@@ -5,6 +5,7 @@ averagingLengths = (-2, 0, 2);
 normalizations = [1.0, Inf];
 βs = [1.0, 3.5];
 σs = [identity, abs, relu];
+# inputSize = inputSizes[1]; cw = CWs[3]; β = βs[1]; normalization = normalizations[1]; scale = scales[2]; averagingLength = averagingLengths[1]
 function compareWithWavelet(inputSize, cw, β, normalization, scale, averagingLength)
     x = randn(Float32, inputSize)
     W = 3
@@ -37,7 +38,7 @@ function compareWithWavelet(inputSize, cw, β, normalization, scale, averagingLe
         @info "values are" inputSize cw β averagingLength normalization scale
     end
     reord = [2:size(wWave, 2)..., 1]
-    testRes = @test norm((cpu(wFFF) - wWave[:, reord, axes(wFFF)[3:end]...])) ./ norm(x) ≈ 0 atol = 2.0f-7 # just fft ifft is on this order
+    testRes = @test norm((cpu(wFFF) - wWave[:, reord, axes(wFFF)[3:end]...]))./norm(x)≈0 atol=2.0f-7 # just fft ifft is on this order
     if !(typeof(testRes) <: Test.Pass)
         @info "values are" inputSize cw β averagingLength normalization scale
     end
@@ -51,8 +52,9 @@ end
     βs = [1.0, 3.5]
     σs = [identity, abs, relu]
 
-    for inputSize in inputSizes, cw in CWs, β in βs, normalization in
-                                                     normalizations, scale in scales, averagingLength in averagingLengths
+    for inputSize in inputSizes, cw in CWs, β in βs, normalization in normalizations,
+        scale in scales, averagingLength in averagingLengths
+
         @testset "inputSize=$inputSize, cw =$(cw), β=$β" begin
             compareWithWavelet(inputSize, cw, β, normalization, scale, averagingLength)
         end

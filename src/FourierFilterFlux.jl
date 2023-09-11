@@ -18,7 +18,8 @@ export ConvFFT, waveletLayer
 export positive_glorot_uniform, iden_perturbed_gaussian,
     uniform_perturbed_gaussian
 # Analytic types
-export TransformTypes, AnalyticWavelet, RealWaveletRealSignal,
+export TransformTypes,
+    AnalyticWavelet, RealWaveletRealSignal,
     RealWaveletComplexSignal, NonAnalyticMatching
 # utils
 export effectiveSize, originalSize
@@ -99,7 +100,7 @@ struct ConvFFT{D,OT,F,A,V,PD,P,T,An}
 end
 
 # the no frills constructor; useful for functor
-function ConvFFT(σ, weight, bias, bc, fftPlan, analytic; trainable=true)
+function ConvFFT(σ, weight, bias, bc, fftPlan, analytic; trainable = true)
     if weight isa AbstractArray
         D = ndims(weight) - 1
         axW = axes(weight)
@@ -117,11 +118,35 @@ function ConvFFT(σ, weight, bias, bc, fftPlan, analytic; trainable=true)
     else
         OT = eltype(fftPlan)
     end
-    ConvFFT{D,OT,typeof(σ),typeof(weight),typeof(bias),typeof(bc),typeof(fftPlan),trainable,typeof(analytic)}(σ, weight, bias, bc, fftPlan, analytic)
+    ConvFFT{
+        D,
+        OT,
+        typeof(σ),
+        typeof(weight),
+        typeof(bias),
+        typeof(bc),
+        typeof(fftPlan),
+        trainable,
+        typeof(analytic)
+    }(σ,
+        weight,
+        bias,
+        bc,
+        fftPlan,
+        analytic)
 end
 
 # constructor with functional defaults and dependent type construction
-function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ=identity; plan=true, boundary=Periodic(), dType=Float32, trainable=true, OT=Float32, An=nothing) where {T,N}
+function ConvFFT(w::AbstractArray{T,N},
+    b,
+    originalSize,
+    σ = identity;
+    plan = true,
+    boundary = Periodic(),
+    dType = Float32,
+    trainable = true,
+    OT = Float32,
+    An = nothing) where {T,N}
     @assert length(originalSize) >= N - 1
     if dType <: Complex
         OT = dType
@@ -163,7 +188,7 @@ function ConvFFT(w::AbstractArray{T,N}, b, originalSize, σ=identity; plan=true,
         An = map(x -> NonAnalyticMatching(), (axW[end]...,))
     end
 
-    return ConvFFT(σ, w, b, boundary, fftPlan, An; trainable=trainable)
+    return ConvFFT(σ, w, b, boundary, fftPlan, An; trainable = trainable)
 end
 
 function makePlan(dType, OT, w, exSz, boundary)
@@ -184,7 +209,18 @@ end
 
 
 # constructor with random entries
-function ConvFFT(k::NTuple{N,Integer}, nOutputChannels=5, σ=identity; nConvDims=2, init=Flux.glorot_normal, plan=true, bias=true, dType=Float32, OT=Float32, boundary=Periodic(), trainable=true, An=nothing) where {N}
+function ConvFFT(k::NTuple{N,Integer},
+    nOutputChannels = 5,
+    σ = identity;
+    nConvDims = 2,
+    init = Flux.glorot_normal,
+    plan = true,
+    bias = true,
+    dType = Float32,
+    OT = Float32,
+    boundary = Periodic(),
+    trainable = true,
+    An = nothing) where {N}
 
     effSize, boundary = effectiveSize(k[1:nConvDims], boundary)
     if dType <: Real && OT <: Real
@@ -201,18 +237,19 @@ function ConvFFT(k::NTuple{N,Integer}, nOutputChannels=5, σ=identity; nConvDims
         b = nothing
     end
 
-    ConvFFT(w, b, k, σ, plan=plan, boundary=boundary, dType=dType,
-        trainable=trainable, OT=OT, An=An)
+    ConvFFT(w, b, k, σ, plan = plan, boundary = boundary, dType = dType,
+        trainable = trainable, OT = OT, An = An)
 end
 
 # basic methods
 function Base.show(io::IO, l::ConvFFT)
     # stored as a brief description
     es = size(l)[1:ndims(l.weight[1])]
-    print(io, "ConvFFT[input=($(es), " *
-              "nfilters = $(length(l.weight)...), " *
-              "σ=$(l.σ), " *
-              "bc=$(l.bc)]")
+    print(io,
+        "ConvFFT[input=($(es), " *
+        "nfilters = $(length(l.weight)...), " *
+        "σ=$(l.σ), " *
+        "bc=$(l.bc)]")
 end
 
 # function Base.show(io::IO, l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:Tuple}
