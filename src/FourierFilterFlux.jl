@@ -252,19 +252,6 @@ function Base.show(io::IO, l::ConvFFT)
         "bc=$(l.bc)]")
 end
 
-# function Base.show(io::IO, l::ConvFFT{D,OT,A,B,C,PD,P}) where {D,OT,A,B,C,PD,P<:Tuple}
-#     if typeof(l.fftPlan[1]) <: Tuple
-#         sz = l.fftPlan[1][2]
-#     else
-#         sz = l.fftPlan[1].sz
-#     end
-#     es = originalSize(sz[1:ndims(l.weight[1])], l.bc)
-#     print(io, "ConvFFT[input=($(es), " *
-#               "nfilters = $(length(l.weight)), " *
-#               "σ=$(l.σ), " *
-#               "bc=$(l.bc)]")
-# end
-
 import Base: ndims
 ndims(::ConvFFT{D}) where {D} = D
 analytic(p::ConvFFT) = p.analytic !== nothing
@@ -272,6 +259,7 @@ analytic(p::ConvFFT) = p.analytic !== nothing
 outType(::ConvFFT{D,OT}) where {D,OT} = OT
 nFrames(p::ConvFFT) = size(p.weight)[end]
 
+include("paramCollection.jl")
 include("transforms.jl")
 include("Utils.jl")
 include("convFFTConstructors.jl")

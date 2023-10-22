@@ -1,4 +1,5 @@
 import NNlib.relu
+# just a little bit of type piracy used internally TODO maybe don't...
 relu(x::C) where {C<:Complex} = real(x) > 0 ? x : C(0)
 
 # ways to convert between gpu and cpu
@@ -90,14 +91,6 @@ function cpu(x::ConvFFT)
         x.bc,
         adapt(Flux.FluxCPUAdaptor(), x.fftPlan),
         x.analytic)
-end
-
-
-function Flux.trainable(CFT::ConvFFT{A,B,C,D,E,F,G,true}) where {A,B,C,D,E,F,G}
-    (CFT.weight, CFT.bias)
-end
-function Flux.trainable(::ConvFFT{A,B,C,D,E,F,G,false}) where {A,B,C,D,E,F,G}
-    tuple()
 end
 
 
