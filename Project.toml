@@ -1,7 +1,7 @@
 name = "FourierFilterFlux"
 uuid = "3d7dfd45-6c90-4c9b-b697-194a05757159"
 authors = ["dsweber2"]
-version = "0.2.3"
+version = "0.3.3"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -17,18 +17,19 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
 
 [compat]
 julia = "1.6"
 
 [extras]
 ContinuousWavelets = "96eb917e-2868-4417-9cb6-27e7ff17528f"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 
 [targets]
 test = ["Test", "FFTW", "LinearAlgebra", "Logging", "Zygote", "Documenter"]

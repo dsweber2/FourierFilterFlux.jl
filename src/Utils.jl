@@ -61,7 +61,7 @@ Adapt.adapt(::Flux.FluxCUDAAdaptor, P::AbstractFFTs.Plan) = cu(P)
 adapt(::Type{<:CuArray}, x::T) where {T<:CUDA.CUFFT.CuFFTPlan} = x
 # is actually converting
 function adapt(::Union{Type{<:Array},Flux.FluxCPUAdaptor},
-    x::T) where {T<:CUDA.CUFFT.CuFFTPlan}
+        x::T) where {T<:CUDA.CUFFT.CuFFTPlan}
     transformSize = x.osz
     dataSize = x.sz
     if dataSize != transformSize
@@ -75,14 +75,18 @@ end
 
 import Flux.cpu, Flux.gpu
 function gpu(x::ConvFFT)
-    Flux.check_use_cuda()
-    use_cuda[] ?
-    ConvFFT(x.σ,
-        adapt(Flux.FluxCUDAAdaptor(), x.weight),
-        adapt(Flux.FluxCUDAAdaptor(), x.bias),
-        x.bc,
-        adapt(Flux.FluxCUDAAdaptor(), x.fftPlan),
-        x.analytic) : x
+    # this is definitely not ideal, but should work for now
+    if CUDA.functional()
+        return ConvFFT(x.σ,
+            adapt(Flux.FluxCUDAAdaptor(), x.weight),
+            adapt(Flux.FluxCUDAAdaptor(), x.bias),
+            x.bc,
+            adapt(Flux.FluxCUDAAdaptor(), x.fftPlan),
+            x.analytic)
+    else
+        x
+    end
+
 end
 function cpu(x::ConvFFT)
     ConvFFT(x.σ,
@@ -138,8 +142,8 @@ function originalDomain(wav, fftPlan, ::AnalyticWavelet)
 end
 
 function originalDomain(wav,
-    fftPlan,
-    ::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
+        fftPlan,
+        ::Union{RealWaveletComplexSignal,RealWaveletRealSignal})
     isSourceOdd = mod(size(fftPlan, 1) + 1, 2)
     return ifft([wav; reverse(conj.(wav[2:end-isSourceOdd]))], 1)
 end
@@ -169,7 +173,7 @@ function fromRestrictLocs(restrict, z, i)
     end
 end
 @recipe function f(x, y, cv::ConvFFT{2}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), Colon()))
+        apply = abs, restrict = (Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
@@ -179,7 +183,7 @@ end
     (x, y, z)
 end
 @recipe function f(cv::ConvFFT{2}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), Colon()))
+        apply = abs, restrict = (Colon(), Colon()))
     restrict = (restrict..., vis)
     w = cv.weight
     z = dispReal ?
@@ -197,7 +201,7 @@ end
 end
 
 @recipe function f(x, cv::ConvFFT{1}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), vis))
+        apply = abs, restrict = (Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
@@ -212,7 +216,7 @@ end
     (x, z)
 end
 @recipe function f(cv::ConvFFT{1}; vis = 1, dispReal = false,
-    apply = abs, restrict = (Colon(), vis))
+        apply = abs, restrict = (Colon(), vis))
     w = cv.weight
     if typeof(cv.fftPlan) <: Tuple
         origSize = size(cv.fftPlan[1], 1)
